@@ -256,6 +256,42 @@ frontend:
           agent: "testing"
           comment: "PROFILE SCREEN ACCESSIBLE ✅ - With authentication now working, profile screen is accessible through navigation. Profile button in header works and screen contains user information, subscription details, and logout functionality. Navigation back from profile works properly."
 
+  - task: "Patient Details Screen"
+    implemented: false
+    working: false
+    file: "Not created"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "PATIENT DETAILS SCREEN MISSING ❌ - Testing revealed that clicking on patient cards shows alerts ('Open details for [Patient Name]') instead of navigating to actual patient details screen. This screen needs to be implemented to show: patient information, medical history, notes, edit functionality, and navigation back to main list."
+
+  - task: "Add/Edit Patient Forms"
+    implemented: false
+    working: false
+    file: "Not created"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "ADD/EDIT PATIENT FORMS MISSING ❌ - Testing revealed that the Add Patient button (+ icon in header) shows alert ('Add new patient feature coming soon!') instead of opening actual add patient form. Need to implement: Add Patient form with all medical fields, Edit Patient form accessible from patient details, Form validation and API integration for creating/updating patients."
+
+  - task: "Notes Management Screen"
+    implemented: false
+    working: false
+    file: "Not created"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "NOTES MANAGEMENT SCREEN MISSING ❌ - No dedicated screen for managing patient notes. Backend API supports notes (POST/GET /api/patients/{id}/notes) but frontend lacks: Notes list view within patient details, Add new note functionality, Edit/delete existing notes, Time-stamped note display with visit types."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
