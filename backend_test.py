@@ -1,23 +1,31 @@
 #!/usr/bin/env python3
 """
-Comprehensive Backend API Testing for Medical Contacts App
-Tests all patient management endpoints with realistic medical data
+Comprehensive Backend Testing for Medical Contacts API with Authentication
+Tests all authentication, subscription, and patient management endpoints
 """
 
 import requests
 import json
-import time
+import sys
 from datetime import datetime
-from typing import Dict, List, Optional
+import os
 
-# Backend URL from environment
-BACKEND_URL = "https://android-dev-studio-3.preview.emergentagent.com/api"
+# Get backend URL from environment
+BACKEND_URL = os.getenv('EXPO_PUBLIC_BACKEND_URL', 'https://android-dev-studio-3.preview.emergentagent.com')
+API_BASE = f"{BACKEND_URL}/api"
 
 class MedicalContactsAPITester:
     def __init__(self):
-        self.base_url = BACKEND_URL
         self.session = requests.Session()
-        self.created_patients = []  # Track created patients for cleanup
+        self.auth_token = None
+        self.demo_user_token = None
+        self.test_user_id = None
+        self.test_patient_id = None
+        self.results = {
+            'passed': 0,
+            'failed': 0,
+            'errors': []
+        }
         
     def log_test(self, test_name: str, success: bool, details: str = ""):
         """Log test results"""
