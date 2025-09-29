@@ -185,30 +185,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Clear state first
+      // First, clear stored data - this is the critical part
+      const storageCleanupResults = await Promise.allSettled([
+        SecureStorageAdapter.removeItem('auth_token'),
+        AsyncStorage.removeItem('user_data'),
+        AsyncStorage.removeItem('patients_cache'),
+        AsyncStorage.removeItem('medical_call_logs'),
+        AsyncStorage.removeItem('contacts_sync_enabled'),
+        AsyncStorage.removeItem('medical-contacts-store') // Clear Zustand store data
+      ]);
+      
+      // Log any storage cleanup failures for debugging
+      storageCleanupResults.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const keys = ['auth_token', 'user_data', 'patients_cache', 'medical_call_logs', 'contacts_sync_enabled', 'store'];
+          console.warn(`Failed to clear ${keys[index]}:`, result.reason);
+        }
+      });
+      
+      // Only clear app state after storage is cleaned
       setToken(null);
       setUser(null);
       
       // Clear axios default authorization header
       delete axios.defaults.headers.common['Authorization'];
       
-      // Clear stored data
-      await Promise.all([
-        SecureStorageAdapter.removeItem('auth_token').catch(e => console.log('Token removal error:', e)),
-        AsyncStorage.removeItem('user_data').catch(e => console.log('User data removal error:', e)),
-        AsyncStorage.removeItem('patients_cache').catch(e => console.log('Cache removal error:', e)), // Clear cached patients
-        AsyncStorage.removeItem('medical_call_logs').catch(e => console.log('Call logs removal error:', e)),
-        AsyncStorage.removeItem('contacts_sync_enabled').catch(e => console.log('Sync settings removal error:', e))
-      ]);
-      
       console.log('Logout completed successfully');
       
     } catch (error) {
-      console.error('Error during logout:', error);
-      // Even if there's an error, ensure state is cleared
+      console.error('Critical error during logout:', error);
+      
+      // If storage cleanup completely fails, still clear app state
+      // but warn user about potential data remnants
       setToken(null);
       setUser(null);
       delete axios.defaults.headers.common['Authorization'];
+      
+      // In production, you might want to show a warning to the user
+      // about manually clearing app data if logout issues persist
+      throw new Error('Logout may not have completed fully. Please clear app data manually if issues persist.');
     }
   };
 
