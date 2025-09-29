@@ -108,7 +108,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loadStoredAuth = async () => {
     try {
       const [storedToken, storedUser] = await Promise.all([
-        SecureStore.getItemAsync('auth_token'),
+        SecureStorageAdapter.getItem('auth_token'),
         AsyncStorage.getItem('user_data')
       ]);
 
