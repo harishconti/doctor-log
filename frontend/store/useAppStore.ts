@@ -125,6 +125,28 @@ const defaultSettings: AppSettings = {
   contactsSync: false
 };
 
+const initialLoadingState: LoadingState = {
+  patients: false,
+  profile: false,
+  subscription: false,
+  stats: false,
+  patientDetails: false,
+  sync: false,
+  auth: false,
+  upload: false,
+};
+
+const initialErrorState: ErrorState = {
+  patients: null,
+  profile: null,
+  subscription: null,
+  stats: null,
+  patientDetails: null,
+  sync: null,
+  auth: null,
+  upload: null,
+};
+
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -132,7 +154,8 @@ export const useAppStore = create<AppState>()(
       patients: [],
       searchQuery: '',
       selectedFilter: 'all',
-      isLoading: false,
+      loading: initialLoadingState,
+      errors: initialErrorState,
       isOffline: false,
       lastSyncTime: null,
       settings: defaultSettings,
