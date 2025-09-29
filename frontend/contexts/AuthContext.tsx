@@ -185,22 +185,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Clear stored data
-      await Promise.all([
-        SecureStorageAdapter.removeItem('auth_token'),
-        AsyncStorage.removeItem('user_data'),
-        AsyncStorage.removeItem('patients_cache') // Clear cached patients
-      ]);
-      
-      // Clear state
+      // Clear state first
       setToken(null);
       setUser(null);
       
       // Clear axios default authorization header
       delete axios.defaults.headers.common['Authorization'];
       
+      // Clear stored data
+      await Promise.all([
+        SecureStorageAdapter.removeItem('auth_token').catch(e => console.log('Token removal error:', e)),
+        AsyncStorage.removeItem('user_data').catch(e => console.log('User data removal error:', e)),
+        AsyncStorage.removeItem('patients_cache').catch(e => console.log('Cache removal error:', e)), // Clear cached patients
+        AsyncStorage.removeItem('medical_call_logs').catch(e => console.log('Call logs removal error:', e)),
+        AsyncStorage.removeItem('contacts_sync_enabled').catch(e => console.log('Sync settings removal error:', e))
+      ]);
+      
+      console.log('Logout completed successfully');
+      
     } catch (error) {
       console.error('Error during logout:', error);
+      // Even if there's an error, ensure state is cleared
+      setToken(null);
+      setUser(null);
+      delete axios.defaults.headers.common['Authorization'];
     }
   };
 
