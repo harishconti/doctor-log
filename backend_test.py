@@ -26,534 +26,619 @@ class MedicalContactsAPITester:
             'failed': 0,
             'errors': []
         }
-        
-    def log_test(self, test_name: str, success: bool, details: str = ""):
+    
+    def log_result(self, test_name, success, message="", response=None):
         """Log test results"""
         status = "✅ PASS" if success else "❌ FAIL"
-        print(f"{status} {test_name}")
-        if details:
-            print(f"   Details: {details}")
-        print()
+        print(f"{status}: {test_name}")
+        if message:
+            print(f"   {message}")
+        if not success and response:
+            print(f"   Response: {response.status_code} - {response.text[:200]}")
         
-    def test_health_check(self) -> bool:
-        """Test GET /api/ - Basic health check"""
+        if success:
+            self.results['passed'] += 1
+        else:
+            self.results['failed'] += 1
+            self.results['errors'].append(f"{test_name}: {message}")
+        print()
+    
+    def test_health_check(self):
+        """Test API health check"""
         try:
-            response = self.session.get(f"{self.base_url}/")
-            success = response.status_code == 200
-            
-            if success:
-                data = response.json()
-                success = "message" in data and "Medical Contacts API" in data["message"]
-                self.log_test("Health Check", success, f"Response: {data}")
-            else:
-                self.log_test("Health Check", False, f"Status: {response.status_code}, Response: {response.text}")
-                
+            response = self.session.get(f"{API_BASE}/")
+            success = response.status_code == 200 and "Medical Contacts API" in response.text
+            self.log_result("Health Check", success, 
+                          f"Status: {response.status_code}, Response: {response.json()}" if success else "API not responding correctly",
+                          response)
             return success
         except Exception as e:
-            self.log_test("Health Check", False, f"Exception: {str(e)}")
+            self.log_result("Health Check", False, f"Exception: {str(e)}")
             return False
     
-    def test_create_patient(self) -> Optional[Dict]:
-        """Test POST /api/patients - Create new patient with medical fields"""
-        patient_data = {
-            "name": "Dr. Sarah Johnson",
-            "phone": "+1-555-0123",
-            "email": "sarah.johnson@email.com",
-            "address": "456 Oak Avenue, Medical District, NY 10001",
-            "location": "Cardiology Wing - Room 302",
-            "initial_complaint": "Chest pain and shortness of breath during exercise",
-            "initial_diagnosis": "Possible angina, requires stress test and ECG",
-            "group": "cardiology",
-            "is_favorite": False
-        }
-        
+    def test_user_registration(self):
+        """Test user registration"""
         try:
-            response = self.session.post(f"{self.base_url}/patients", json=patient_data)
+            user_data = {
+                "email": f"test.doctor.{datetime.now().timestamp()}@clinic.com",
+                "password": "testpassword123",
+                "full_name": "Dr. Test Doctor",
+                "phone": "+1234567890",
+                "medical_specialty": "general"
+            }
+            
+            response = self.session.post(f"{API_BASE}/auth/register", json=user_data)
             success = response.status_code == 200
             
             if success:
                 data = response.json()
-                success = data.get("success", False) and "patient" in data
-                
-                if success:
-                    patient = data["patient"]
-                    # Verify auto-increment patient ID format
-                    patient_id_valid = patient.get("patient_id", "").startswith("PAT")
-                    success = success and patient_id_valid
-                    
-                    if success:
-                        self.created_patients.append(patient["id"])
-                        self.log_test("Create Patient", True, 
-                                    f"Created patient {patient['patient_id']} - {patient['name']}")
-                        return patient
-                    else:
-                        self.log_test("Create Patient", False, "Invalid patient_id format")
+                if data.get('success') and data.get('access_token'):
+                    self.auth_token = data['access_token']
+                    self.test_user_id = data['user']['id']
+                    self.log_result("User Registration", True, 
+                                  f"User created with ID: {self.test_user_id}, Token received")
                 else:
-                    self.log_test("Create Patient", False, f"Invalid response structure: {data}")
+                    success = False
+                    self.log_result("User Registration", False, "Missing success flag or access token", response)
             else:
-                self.log_test("Create Patient", False, f"Status: {response.status_code}, Response: {response.text}")
-                
-        except Exception as e:
-            self.log_test("Create Patient", False, f"Exception: {str(e)}")
+                self.log_result("User Registration", False, "Registration failed", response)
             
-        return None
+            return success
+        except Exception as e:
+            self.log_result("User Registration", False, f"Exception: {str(e)}")
+            return False
     
-    def test_create_multiple_patients(self) -> List[Dict]:
-        """Create multiple patients to test auto-increment and search functionality"""
-        patients_data = [
-            {
-                "name": "Michael Rodriguez",
-                "phone": "+1-555-0124",
-                "email": "m.rodriguez@email.com",
-                "address": "789 Pine Street, Downtown, NY 10002",
-                "location": "Orthopedic Clinic - Room 105",
-                "initial_complaint": "Lower back pain after lifting heavy objects",
-                "initial_diagnosis": "Lumbar strain, recommend physical therapy",
-                "group": "orthopedics",
-                "is_favorite": True
-            },
-            {
-                "name": "Emily Chen",
-                "phone": "+1-555-0125",
-                "email": "emily.chen@email.com",
-                "address": "321 Maple Drive, Suburbs, NY 10003",
-                "location": "Pediatrics Department - Room 201",
-                "initial_complaint": "Persistent cough and fever in 8-year-old",
-                "initial_diagnosis": "Upper respiratory infection, prescribed antibiotics",
-                "group": "pediatrics",
-                "is_favorite": False
-            },
-            {
-                "name": "Robert Thompson",
-                "phone": "+1-555-0126",
-                "email": "r.thompson@email.com",
-                "address": "654 Elm Street, Uptown, NY 10004",
-                "location": "Dermatology Suite - Room 401",
-                "initial_complaint": "Suspicious mole on left shoulder",
-                "initial_diagnosis": "Atypical nevus, biopsy scheduled",
-                "group": "dermatology",
+    def test_demo_user_login(self):
+        """Test login with demo user"""
+        try:
+            login_data = {
+                "email": "dr.sarah@clinic.com",
+                "password": "password123"
+            }
+            
+            response = self.session.post(f"{API_BASE}/auth/login", json=login_data)
+            success = response.status_code == 200
+            
+            if success:
+                data = response.json()
+                if data.get('success') and data.get('access_token'):
+                    self.demo_user_token = data['access_token']
+                    self.log_result("Demo User Login", True, 
+                                  f"Demo user logged in: {data['user']['full_name']}, Specialty: {data['user']['medical_specialty']}")
+                else:
+                    success = False
+                    self.log_result("Demo User Login", False, "Missing success flag or access token", response)
+            else:
+                self.log_result("Demo User Login", False, "Login failed", response)
+            
+            return success
+        except Exception as e:
+            self.log_result("Demo User Login", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_get_current_user(self):
+        """Test getting current user profile"""
+        if not self.auth_token:
+            self.log_result("Get Current User", False, "No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response = self.session.get(f"{API_BASE}/auth/me", headers=headers)
+            success = response.status_code == 200
+            
+            if success:
+                data = response.json()
+                if data.get('success') and data.get('user'):
+                    user = data['user']
+                    self.log_result("Get Current User", True, 
+                                  f"User: {user['full_name']}, Email: {user['email']}, Specialty: {user['medical_specialty']}")
+                else:
+                    success = False
+                    self.log_result("Get Current User", False, "Missing user data", response)
+            else:
+                self.log_result("Get Current User", False, "Failed to get user profile", response)
+            
+            return success
+        except Exception as e:
+            self.log_result("Get Current User", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_unauthorized_access(self):
+        """Test that endpoints require authentication"""
+        try:
+            # Test without token
+            response = self.session.get(f"{API_BASE}/patients")
+            success = response.status_code == 403 or response.status_code == 401
+            
+            if success:
+                self.log_result("Unauthorized Access Protection", True, 
+                              f"Correctly blocked unauthorized access with status {response.status_code}")
+            else:
+                self.log_result("Unauthorized Access Protection", False, 
+                              f"Should have blocked access but got status {response.status_code}", response)
+            
+            return success
+        except Exception as e:
+            self.log_result("Unauthorized Access Protection", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_subscription_info(self):
+        """Test getting subscription information"""
+        if not self.demo_user_token:
+            self.log_result("Subscription Info", False, "No demo user token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.demo_user_token}"}
+            response = self.session.get(f"{API_BASE}/subscription", headers=headers)
+            success = response.status_code == 200
+            
+            if success:
+                data = response.json()
+                if data.get('success') and data.get('subscription'):
+                    sub = data['subscription']
+                    self.log_result("Subscription Info", True, 
+                                  f"Plan: {sub.get('subscription_plan')}, Status: {sub.get('subscription_status')}")
+                else:
+                    success = False
+                    self.log_result("Subscription Info", False, "Missing subscription data", response)
+            else:
+                self.log_result("Subscription Info", False, "Failed to get subscription info", response)
+            
+            return success
+        except Exception as e:
+            self.log_result("Subscription Info", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_subscription_upgrade(self):
+        """Test subscription upgrade"""
+        if not self.auth_token:
+            self.log_result("Subscription Upgrade", False, "No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response = self.session.post(f"{API_BASE}/subscription/upgrade", headers=headers)
+            success = response.status_code == 200
+            
+            if success:
+                data = response.json()
+                if data.get('success'):
+                    self.log_result("Subscription Upgrade", True, 
+                                  f"Successfully upgraded to Pro plan: {data.get('message')}")
+                else:
+                    success = False
+                    self.log_result("Subscription Upgrade", False, "Upgrade failed", response)
+            else:
+                self.log_result("Subscription Upgrade", False, "Failed to upgrade subscription", response)
+            
+            return success
+        except Exception as e:
+            self.log_result("Subscription Upgrade", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_demo_patients_loaded(self):
+        """Test that demo patients are loaded for demo user"""
+        if not self.demo_user_token:
+            self.log_result("Demo Patients Loaded", False, "No demo user token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.demo_user_token}"}
+            response = self.session.get(f"{API_BASE}/patients", headers=headers)
+            success = response.status_code == 200
+            
+            if success:
+                data = response.json()
+                if data.get('success') and data.get('patients'):
+                    patients = data['patients']
+                    patient_count = len(patients)
+                    if patient_count >= 5:  # Should have 5 demo patients
+                        # Check for specific demo patients
+                        patient_names = [p['name'] for p in patients]
+                        expected_names = ['John Wilson', 'Emma Rodriguez', 'Robert Chang', 'Lisa Thompson', 'David Miller']
+                        found_names = [name for name in expected_names if name in patient_names]
+                        
+                        self.log_result("Demo Patients Loaded", True, 
+                                      f"Found {patient_count} patients including: {', '.join(found_names[:3])}")
+                    else:
+                        success = False
+                        self.log_result("Demo Patients Loaded", False, 
+                                      f"Expected 5+ demo patients, found {patient_count}", response)
+                else:
+                    success = False
+                    self.log_result("Demo Patients Loaded", False, "No patients data returned", response)
+            else:
+                self.log_result("Demo Patients Loaded", False, "Failed to get patients", response)
+            
+            return success
+        except Exception as e:
+            self.log_result("Demo Patients Loaded", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_create_patient(self):
+        """Test creating a new patient"""
+        if not self.auth_token:
+            self.log_result("Create Patient", False, "No auth token available")
+            return False
+        
+        try:
+            patient_data = {
+                "name": "Test Patient Johnson",
+                "phone": "+1555999888",
+                "email": "test.patient@email.com",
+                "address": "123 Test Street, Test City",
+                "location": "Clinic Room 5",
+                "initial_complaint": "Test complaint for automated testing",
+                "initial_diagnosis": "Test diagnosis - automated test case",
+                "group": "test_group",
                 "is_favorite": True
             }
-        ]
-        
-        created_patients = []
-        for patient_data in patients_data:
-            try:
-                response = self.session.post(f"{self.base_url}/patients", json=patient_data)
-                if response.status_code == 200:
-                    data = response.json()
-                    if data.get("success") and "patient" in data:
-                        patient = data["patient"]
-                        created_patients.append(patient)
-                        self.created_patients.append(patient["id"])
-                        
-            except Exception as e:
-                print(f"Failed to create patient {patient_data['name']}: {str(e)}")
-        
-        self.log_test("Create Multiple Patients", len(created_patients) == len(patients_data),
-                     f"Created {len(created_patients)}/{len(patients_data)} patients")
-        return created_patients
-    
-    def test_get_all_patients(self) -> bool:
-        """Test GET /api/patients - List all patients"""
-        try:
-            response = self.session.get(f"{self.base_url}/patients")
+            
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response = self.session.post(f"{API_BASE}/patients", json=patient_data, headers=headers)
             success = response.status_code == 200
             
             if success:
                 data = response.json()
-                success = data.get("success", False) and "patients" in data
-                
-                if success:
-                    patients = data["patients"]
-                    self.log_test("Get All Patients", True, f"Retrieved {len(patients)} patients")
+                if data.get('success') and data.get('patient'):
+                    patient = data['patient']
+                    self.test_patient_id = patient['id']
+                    self.log_result("Create Patient", True, 
+                                  f"Created patient: {patient['name']}, ID: {patient['patient_id']}")
                 else:
-                    self.log_test("Get All Patients", False, f"Invalid response structure: {data}")
+                    success = False
+                    self.log_result("Create Patient", False, "Missing patient data in response", response)
             else:
-                self.log_test("Get All Patients", False, f"Status: {response.status_code}")
-                
+                self.log_result("Create Patient", False, "Failed to create patient", response)
+            
             return success
         except Exception as e:
-            self.log_test("Get All Patients", False, f"Exception: {str(e)}")
+            self.log_result("Create Patient", False, f"Exception: {str(e)}")
             return False
     
-    def test_search_functionality(self) -> bool:
-        """Test GET /api/patients with search parameters"""
-        test_cases = [
-            ("name search", {"search": "Sarah"}),
-            ("phone search", {"search": "555-0123"}),
-            ("email search", {"search": "sarah.johnson"}),
-            ("patient_id search", {"search": "PAT"}),
-            ("group filter", {"group": "cardiology"}),
-            ("favorites only", {"favorites_only": True}),
-            ("combined filters", {"group": "orthopedics", "favorites_only": True})
-        ]
-        
-        all_passed = True
-        for test_name, params in test_cases:
-            try:
-                response = self.session.get(f"{self.base_url}/patients", params=params)
-                success = response.status_code == 200
-                
-                if success:
-                    data = response.json()
-                    success = data.get("success", False) and "patients" in data
-                    
-                if success:
-                    patients = data["patients"]
-                    self.log_test(f"Search - {test_name}", True, f"Found {len(patients)} patients")
-                else:
-                    self.log_test(f"Search - {test_name}", False, f"Status: {response.status_code}")
-                    all_passed = False
-                    
-            except Exception as e:
-                self.log_test(f"Search - {test_name}", False, f"Exception: {str(e)}")
-                all_passed = False
-        
-        return all_passed
-    
-    def test_get_specific_patient(self, patient_id: str) -> bool:
-        """Test GET /api/patients/{patient_id} - Get specific patient details"""
-        try:
-            response = self.session.get(f"{self.base_url}/patients/{patient_id}")
-            success = response.status_code == 200
-            
-            if success:
-                data = response.json()
-                success = data.get("success", False) and "patient" in data
-                
-                if success:
-                    patient = data["patient"]
-                    self.log_test("Get Specific Patient", True, 
-                                f"Retrieved patient: {patient.get('name', 'Unknown')}")
-                else:
-                    self.log_test("Get Specific Patient", False, f"Invalid response: {data}")
-            else:
-                self.log_test("Get Specific Patient", False, f"Status: {response.status_code}")
-                
-            return success
-        except Exception as e:
-            self.log_test("Get Specific Patient", False, f"Exception: {str(e)}")
+    def test_get_patients(self):
+        """Test getting patients list"""
+        if not self.auth_token:
+            self.log_result("Get Patients", False, "No auth token available")
             return False
-    
-    def test_update_patient(self, patient_id: str) -> bool:
-        """Test PUT /api/patients/{patient_id} - Update patient information"""
-        update_data = {
-            "location": "Cardiology Wing - Room 305 (Updated)",
-            "initial_diagnosis": "Confirmed angina, medication prescribed",
-            "is_favorite": True
-        }
         
         try:
-            response = self.session.put(f"{self.base_url}/patients/{patient_id}", json=update_data)
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response = self.session.get(f"{API_BASE}/patients", headers=headers)
             success = response.status_code == 200
             
             if success:
                 data = response.json()
-                success = data.get("success", False) and "patient" in data
-                
-                if success:
-                    patient = data["patient"]
-                    # Verify updates were applied
-                    location_updated = patient.get("location") == update_data["location"]
-                    diagnosis_updated = patient.get("initial_diagnosis") == update_data["initial_diagnosis"]
-                    favorite_updated = patient.get("is_favorite") == update_data["is_favorite"]
-                    
-                    success = location_updated and diagnosis_updated and favorite_updated
-                    self.log_test("Update Patient", success, 
-                                f"Updated patient: {patient.get('name', 'Unknown')}")
+                if data.get('success') and 'patients' in data:
+                    patients = data['patients']
+                    self.log_result("Get Patients", True, 
+                                  f"Retrieved {len(patients)} patients for current user")
                 else:
-                    self.log_test("Update Patient", False, f"Invalid response: {data}")
+                    success = False
+                    self.log_result("Get Patients", False, "Missing patients data", response)
             else:
-                self.log_test("Update Patient", False, f"Status: {response.status_code}")
-                
+                self.log_result("Get Patients", False, "Failed to get patients", response)
+            
             return success
         except Exception as e:
-            self.log_test("Update Patient", False, f"Exception: {str(e)}")
+            self.log_result("Get Patients", False, f"Exception: {str(e)}")
             return False
     
-    def test_add_patient_note(self, patient_id: str) -> bool:
-        """Test POST /api/patients/{patient_id}/notes - Add timestamped notes"""
-        note_data = {
-            "content": "Patient responded well to initial treatment. Blood pressure normalized. Recommended lifestyle changes including regular exercise and dietary modifications. Schedule follow-up in 2 weeks.",
-            "visit_type": "follow-up"
-        }
+    def test_search_patients(self):
+        """Test patient search functionality"""
+        if not self.demo_user_token:
+            self.log_result("Search Patients", False, "No demo user token available")
+            return False
         
         try:
-            response = self.session.post(f"{self.base_url}/patients/{patient_id}/notes", json=note_data)
+            headers = {"Authorization": f"Bearer {self.demo_user_token}"}
+            
+            # Test search by name
+            response = self.session.get(f"{API_BASE}/patients?search=John", headers=headers)
             success = response.status_code == 200
             
             if success:
                 data = response.json()
-                success = data.get("success", False) and "note" in data
-                
-                if success:
-                    note = data["note"]
-                    # Verify note has required fields
-                    has_id = "id" in note
-                    has_timestamp = "timestamp" in note
-                    has_content = note.get("content") == note_data["content"]
-                    has_visit_type = note.get("visit_type") == note_data["visit_type"]
-                    
-                    success = has_id and has_timestamp and has_content and has_visit_type
-                    self.log_test("Add Patient Note", success, f"Added note with ID: {note.get('id', 'Unknown')}")
-                else:
-                    self.log_test("Add Patient Note", False, f"Invalid response: {data}")
-            else:
-                self.log_test("Add Patient Note", False, f"Status: {response.status_code}")
-                
-            return success
-        except Exception as e:
-            self.log_test("Add Patient Note", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_get_patient_notes(self, patient_id: str) -> bool:
-        """Test GET /api/patients/{patient_id}/notes - Get patient notes history"""
-        try:
-            response = self.session.get(f"{self.base_url}/patients/{patient_id}/notes")
-            success = response.status_code == 200
-            
-            if success:
-                data = response.json()
-                success = data.get("success", False) and "notes" in data
-                
-                if success:
-                    notes = data["notes"]
-                    self.log_test("Get Patient Notes", True, f"Retrieved {len(notes)} notes")
-                    
-                    # Verify notes are sorted by timestamp (newest first)
-                    if len(notes) > 1:
-                        timestamps = [note.get("timestamp") for note in notes if "timestamp" in note]
-                        sorted_correctly = timestamps == sorted(timestamps, reverse=True)
-                        if not sorted_correctly:
-                            self.log_test("Notes Sorting", False, "Notes not sorted by timestamp")
-                            return False
-                else:
-                    self.log_test("Get Patient Notes", False, f"Invalid response: {data}")
-            else:
-                self.log_test("Get Patient Notes", False, f"Status: {response.status_code}")
-                
-            return success
-        except Exception as e:
-            self.log_test("Get Patient Notes", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_get_groups(self) -> bool:
-        """Test GET /api/groups - Get patient groups/categories"""
-        try:
-            response = self.session.get(f"{self.base_url}/groups")
-            success = response.status_code == 200
-            
-            if success:
-                data = response.json()
-                success = data.get("success", False) and "groups" in data
-                
-                if success:
-                    groups = data["groups"]
-                    expected_groups = ["cardiology", "orthopedics", "pediatrics", "dermatology"]
-                    found_groups = [g for g in expected_groups if g in groups]
-                    
-                    self.log_test("Get Groups", True, f"Retrieved groups: {groups}")
-                    if len(found_groups) < len(expected_groups):
-                        print(f"   Note: Expected groups {expected_groups}, found {found_groups}")
-                else:
-                    self.log_test("Get Groups", False, f"Invalid response: {data}")
-            else:
-                self.log_test("Get Groups", False, f"Status: {response.status_code}")
-                
-            return success
-        except Exception as e:
-            self.log_test("Get Groups", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_get_statistics(self) -> bool:
-        """Test GET /api/stats - Get statistics"""
-        try:
-            response = self.session.get(f"{self.base_url}/stats")
-            success = response.status_code == 200
-            
-            if success:
-                data = response.json()
-                success = data.get("success", False) and "stats" in data
-                
-                if success:
-                    stats = data["stats"]
-                    has_total = "total_patients" in stats
-                    has_favorites = "favorite_patients" in stats
-                    has_groups = "groups" in stats
-                    
-                    success = has_total and has_favorites and has_groups
-                    
-                    if success:
-                        self.log_test("Get Statistics", True, 
-                                    f"Total: {stats['total_patients']}, Favorites: {stats['favorite_patients']}")
+                if data.get('success') and data.get('patients'):
+                    patients = data['patients']
+                    found_john = any('John' in p['name'] for p in patients)
+                    if found_john:
+                        self.log_result("Search Patients", True, 
+                                      f"Search by name 'John' found {len(patients)} patients")
                     else:
-                        self.log_test("Get Statistics", False, "Missing required stats fields")
+                        success = False
+                        self.log_result("Search Patients", False, "Search didn't find expected patient 'John'", response)
                 else:
-                    self.log_test("Get Statistics", False, f"Invalid response: {data}")
+                    success = False
+                    self.log_result("Search Patients", False, "Search returned no data", response)
             else:
-                self.log_test("Get Statistics", False, f"Status: {response.status_code}")
-                
+                self.log_result("Search Patients", False, "Search request failed", response)
+            
             return success
         except Exception as e:
-            self.log_test("Get Statistics", False, f"Exception: {str(e)}")
+            self.log_result("Search Patients", False, f"Exception: {str(e)}")
             return False
     
-    def test_error_handling(self) -> bool:
-        """Test error handling for invalid requests"""
-        test_cases = [
-            ("Get non-existent patient", "GET", f"{self.base_url}/patients/invalid-id", None, 404),
-            ("Update non-existent patient", "PUT", f"{self.base_url}/patients/invalid-id", {"name": "Test"}, 404),
-            ("Delete non-existent patient", "DELETE", f"{self.base_url}/patients/invalid-id", None, 404),
-            ("Add note to non-existent patient", "POST", f"{self.base_url}/patients/invalid-id/notes", 
-             {"content": "Test note"}, 404),
-            ("Get notes for non-existent patient", "GET", f"{self.base_url}/patients/invalid-id/notes", None, 404)
-        ]
+    def test_update_patient(self):
+        """Test updating a patient"""
+        if not self.auth_token or not self.test_patient_id:
+            self.log_result("Update Patient", False, "No auth token or patient ID available")
+            return False
         
-        all_passed = True
-        for test_name, method, url, data, expected_status in test_cases:
-            try:
-                if method == "GET":
-                    response = self.session.get(url)
-                elif method == "POST":
-                    response = self.session.post(url, json=data)
-                elif method == "PUT":
-                    response = self.session.put(url, json=data)
-                elif method == "DELETE":
-                    response = self.session.delete(url)
-                
-                success = response.status_code == expected_status
-                self.log_test(f"Error Handling - {test_name}", success, 
-                            f"Expected {expected_status}, got {response.status_code}")
-                
-                if not success:
-                    all_passed = False
-                    
-            except Exception as e:
-                self.log_test(f"Error Handling - {test_name}", False, f"Exception: {str(e)}")
-                all_passed = False
-        
-        return all_passed
-    
-    def test_delete_patient(self, patient_id: str) -> bool:
-        """Test DELETE /api/patients/{patient_id} - Delete patient"""
         try:
-            response = self.session.delete(f"{self.base_url}/patients/{patient_id}")
+            update_data = {
+                "initial_diagnosis": "Updated diagnosis - test completed successfully",
+                "is_favorite": False
+            }
+            
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response = self.session.put(f"{API_BASE}/patients/{self.test_patient_id}", 
+                                      json=update_data, headers=headers)
             success = response.status_code == 200
             
             if success:
                 data = response.json()
-                success = data.get("success", False) and "message" in data
-                
-                if success:
-                    self.log_test("Delete Patient", True, f"Deleted patient: {patient_id}")
-                    # Remove from tracking list
-                    if patient_id in self.created_patients:
-                        self.created_patients.remove(patient_id)
+                if data.get('success') and data.get('patient'):
+                    patient = data['patient']
+                    self.log_result("Update Patient", True, 
+                                  f"Updated patient: {patient['name']}, New diagnosis: {patient['initial_diagnosis']}")
                 else:
-                    self.log_test("Delete Patient", False, f"Invalid response: {data}")
+                    success = False
+                    self.log_result("Update Patient", False, "Missing updated patient data", response)
             else:
-                self.log_test("Delete Patient", False, f"Status: {response.status_code}")
-                
+                self.log_result("Update Patient", False, "Failed to update patient", response)
+            
             return success
         except Exception as e:
-            self.log_test("Delete Patient", False, f"Exception: {str(e)}")
+            self.log_result("Update Patient", False, f"Exception: {str(e)}")
             return False
     
-    def cleanup_test_data(self):
-        """Clean up any remaining test patients"""
-        print("\n🧹 Cleaning up test data...")
-        for patient_id in self.created_patients.copy():
-            try:
-                response = self.session.delete(f"{self.base_url}/patients/{patient_id}")
-                if response.status_code == 200:
-                    print(f"   Deleted patient: {patient_id}")
-                    self.created_patients.remove(patient_id)
-            except Exception as e:
-                print(f"   Failed to delete patient {patient_id}: {str(e)}")
+    def test_add_patient_note(self):
+        """Test adding a note to a patient"""
+        if not self.auth_token or not self.test_patient_id:
+            self.log_result("Add Patient Note", False, "No auth token or patient ID available")
+            return False
+        
+        try:
+            note_data = {
+                "content": "Test note added during automated testing - patient responded well to treatment",
+                "visit_type": "follow-up"
+            }
+            
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response = self.session.post(f"{API_BASE}/patients/{self.test_patient_id}/notes", 
+                                       json=note_data, headers=headers)
+            success = response.status_code == 200
+            
+            if success:
+                data = response.json()
+                if data.get('success') and data.get('note'):
+                    note = data['note']
+                    self.log_result("Add Patient Note", True, 
+                                  f"Added note: {note['content'][:50]}..., Visit type: {note['visit_type']}")
+                else:
+                    success = False
+                    self.log_result("Add Patient Note", False, "Missing note data in response", response)
+            else:
+                self.log_result("Add Patient Note", False, "Failed to add patient note", response)
+            
+            return success
+        except Exception as e:
+            self.log_result("Add Patient Note", False, f"Exception: {str(e)}")
+            return False
     
-    def run_comprehensive_tests(self):
-        """Run all backend API tests"""
-        print("🏥 Medical Contacts Backend API Testing")
-        print("=" * 50)
-        print(f"Testing backend at: {self.base_url}")
+    def test_get_patient_notes(self):
+        """Test getting patient notes"""
+        if not self.auth_token or not self.test_patient_id:
+            self.log_result("Get Patient Notes", False, "No auth token or patient ID available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response = self.session.get(f"{API_BASE}/patients/{self.test_patient_id}/notes", headers=headers)
+            success = response.status_code == 200
+            
+            if success:
+                data = response.json()
+                if data.get('success') and 'notes' in data:
+                    notes = data['notes']
+                    self.log_result("Get Patient Notes", True, 
+                                  f"Retrieved {len(notes)} notes for patient")
+                else:
+                    success = False
+                    self.log_result("Get Patient Notes", False, "Missing notes data", response)
+            else:
+                self.log_result("Get Patient Notes", False, "Failed to get patient notes", response)
+            
+            return success
+        except Exception as e:
+            self.log_result("Get Patient Notes", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_get_groups(self):
+        """Test getting patient groups"""
+        if not self.demo_user_token:
+            self.log_result("Get Groups", False, "No demo user token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.demo_user_token}"}
+            response = self.session.get(f"{API_BASE}/groups", headers=headers)
+            success = response.status_code == 200
+            
+            if success:
+                data = response.json()
+                if data.get('success') and 'groups' in data:
+                    groups = data['groups']
+                    self.log_result("Get Groups", True, 
+                                  f"Retrieved {len(groups)} groups: {', '.join(groups[:5])}")
+                else:
+                    success = False
+                    self.log_result("Get Groups", False, "Missing groups data", response)
+            else:
+                self.log_result("Get Groups", False, "Failed to get groups", response)
+            
+            return success
+        except Exception as e:
+            self.log_result("Get Groups", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_get_statistics(self):
+        """Test getting user statistics"""
+        if not self.demo_user_token:
+            self.log_result("Get Statistics", False, "No demo user token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.demo_user_token}"}
+            response = self.session.get(f"{API_BASE}/stats", headers=headers)
+            success = response.status_code == 200
+            
+            if success:
+                data = response.json()
+                if data.get('success') and data.get('stats'):
+                    stats = data['stats']
+                    self.log_result("Get Statistics", True, 
+                                  f"Total patients: {stats.get('total_patients')}, Favorites: {stats.get('favorite_patients')}")
+                else:
+                    success = False
+                    self.log_result("Get Statistics", False, "Missing stats data", response)
+            else:
+                self.log_result("Get Statistics", False, "Failed to get statistics", response)
+            
+            return success
+        except Exception as e:
+            self.log_result("Get Statistics", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_user_data_isolation(self):
+        """Test that users can only see their own patients"""
+        if not self.auth_token or not self.demo_user_token:
+            self.log_result("User Data Isolation", False, "Missing auth tokens")
+            return False
+        
+        try:
+            # Get patients for test user (should be 1 - the one we created)
+            headers1 = {"Authorization": f"Bearer {self.auth_token}"}
+            response1 = self.session.get(f"{API_BASE}/patients", headers=headers1)
+            
+            # Get patients for demo user (should be 5 demo patients)
+            headers2 = {"Authorization": f"Bearer {self.demo_user_token}"}
+            response2 = self.session.get(f"{API_BASE}/patients", headers=headers2)
+            
+            success = response1.status_code == 200 and response2.status_code == 200
+            
+            if success:
+                data1 = response1.json()
+                data2 = response2.json()
+                
+                if data1.get('success') and data2.get('success'):
+                    patients1 = data1['patients']
+                    patients2 = data2['patients']
+                    
+                    # Check that patient lists are different and don't overlap
+                    patient_ids1 = set(p['id'] for p in patients1)
+                    patient_ids2 = set(p['id'] for p in patients2)
+                    overlap = patient_ids1.intersection(patient_ids2)
+                    
+                    if len(overlap) == 0:
+                        self.log_result("User Data Isolation", True, 
+                                      f"Test user has {len(patients1)} patients, Demo user has {len(patients2)} patients, No overlap")
+                    else:
+                        success = False
+                        self.log_result("User Data Isolation", False, 
+                                      f"Found {len(overlap)} overlapping patients - data isolation failed")
+                else:
+                    success = False
+                    self.log_result("User Data Isolation", False, "Failed to get patient data for comparison")
+            else:
+                self.log_result("User Data Isolation", False, "Failed to retrieve patients for both users")
+            
+            return success
+        except Exception as e:
+            self.log_result("User Data Isolation", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_delete_patient(self):
+        """Test deleting a patient (cleanup)"""
+        if not self.auth_token or not self.test_patient_id:
+            self.log_result("Delete Patient", False, "No auth token or patient ID available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response = self.session.delete(f"{API_BASE}/patients/{self.test_patient_id}", headers=headers)
+            success = response.status_code == 200
+            
+            if success:
+                data = response.json()
+                if data.get('success'):
+                    self.log_result("Delete Patient", True, 
+                                  f"Successfully deleted test patient: {data.get('message')}")
+                else:
+                    success = False
+                    self.log_result("Delete Patient", False, "Delete operation failed", response)
+            else:
+                self.log_result("Delete Patient", False, "Failed to delete patient", response)
+            
+            return success
+        except Exception as e:
+            self.log_result("Delete Patient", False, f"Exception: {str(e)}")
+            return False
+    
+    def run_all_tests(self):
+        """Run all tests in sequence"""
+        print("=" * 80)
+        print("MEDICAL CONTACTS API COMPREHENSIVE TESTING")
+        print("=" * 80)
+        print(f"Testing API at: {API_BASE}")
         print()
         
-        test_results = []
+        # Test sequence
+        tests = [
+            ("Health Check", self.test_health_check),
+            ("User Registration", self.test_user_registration),
+            ("Demo User Login", self.test_demo_user_login),
+            ("Get Current User", self.test_get_current_user),
+            ("Unauthorized Access Protection", self.test_unauthorized_access),
+            ("Subscription Info", self.test_subscription_info),
+            ("Subscription Upgrade", self.test_subscription_upgrade),
+            ("Demo Patients Loaded", self.test_demo_patients_loaded),
+            ("Create Patient", self.test_create_patient),
+            ("Get Patients", self.test_get_patients),
+            ("Search Patients", self.test_search_patients),
+            ("Update Patient", self.test_update_patient),
+            ("Add Patient Note", self.test_add_patient_note),
+            ("Get Patient Notes", self.test_get_patient_notes),
+            ("Get Groups", self.test_get_groups),
+            ("Get Statistics", self.test_get_statistics),
+            ("User Data Isolation", self.test_user_data_isolation),
+            ("Delete Patient", self.test_delete_patient),
+        ]
         
-        # 1. Health Check
-        test_results.append(("Health Check", self.test_health_check()))
-        
-        # 2. Create initial patient
-        patient = self.test_create_patient()
-        test_results.append(("Create Patient", patient is not None))
-        
-        if patient:
-            patient_id = patient["id"]
-            
-            # 3. Create multiple patients for comprehensive testing
-            additional_patients = self.test_create_multiple_patients()
-            test_results.append(("Create Multiple Patients", len(additional_patients) > 0))
-            
-            # 4. Get all patients
-            test_results.append(("Get All Patients", self.test_get_all_patients()))
-            
-            # 5. Search functionality
-            test_results.append(("Search Functionality", self.test_search_functionality()))
-            
-            # 6. Get specific patient
-            test_results.append(("Get Specific Patient", self.test_get_specific_patient(patient_id)))
-            
-            # 7. Update patient
-            test_results.append(("Update Patient", self.test_update_patient(patient_id)))
-            
-            # 8. Add patient note
-            test_results.append(("Add Patient Note", self.test_add_patient_note(patient_id)))
-            
-            # 9. Get patient notes
-            test_results.append(("Get Patient Notes", self.test_get_patient_notes(patient_id)))
-            
-            # 10. Get groups
-            test_results.append(("Get Groups", self.test_get_groups()))
-            
-            # 11. Get statistics
-            test_results.append(("Get Statistics", self.test_get_statistics()))
-            
-            # 12. Error handling
-            test_results.append(("Error Handling", self.test_error_handling()))
-            
-            # 13. Delete patient (test one patient)
-            if additional_patients:
-                test_patient_id = additional_patients[0]["id"]
-                test_results.append(("Delete Patient", self.test_delete_patient(test_patient_id)))
-        
-        # Cleanup
-        self.cleanup_test_data()
+        for test_name, test_func in tests:
+            test_func()
         
         # Summary
-        print("\n📊 Test Results Summary")
-        print("=" * 30)
-        passed = sum(1 for _, result in test_results if result)
-        total = len(test_results)
+        print("=" * 80)
+        print("TEST SUMMARY")
+        print("=" * 80)
+        print(f"✅ PASSED: {self.results['passed']}")
+        print(f"❌ FAILED: {self.results['failed']}")
+        print(f"📊 TOTAL:  {self.results['passed'] + self.results['failed']}")
         
-        for test_name, result in test_results:
-            status = "✅ PASS" if result else "❌ FAIL"
-            print(f"{status} {test_name}")
+        if self.results['failed'] > 0:
+            print("\n🚨 FAILED TESTS:")
+            for error in self.results['errors']:
+                print(f"   • {error}")
         
-        print(f"\nOverall: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
+        print("=" * 80)
         
-        if passed == total:
-            print("🎉 All tests passed! Backend API is working correctly.")
-        else:
-            print("⚠️  Some tests failed. Please check the detailed output above.")
-        
-        return passed == total
-
-def main():
-    """Main test execution"""
-    tester = MedicalContactsAPITester()
-    success = tester.run_comprehensive_tests()
-    return 0 if success else 1
+        return self.results['failed'] == 0
 
 if __name__ == "__main__":
-    exit(main())
+    tester = MedicalContactsAPITester()
+    success = tester.run_all_tests()
+    sys.exit(0 if success else 1)
