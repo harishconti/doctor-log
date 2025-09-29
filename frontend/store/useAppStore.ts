@@ -41,14 +41,41 @@ export interface AppSettings {
   contactsSync: boolean;
 }
 
+interface LoadingState {
+  patients: boolean;
+  profile: boolean;
+  subscription: boolean;
+  stats: boolean;
+  patientDetails: boolean;
+  sync: boolean;
+  auth: boolean;
+  upload: boolean;
+}
+
+interface ErrorState {
+  patients: string | null;
+  profile: string | null;
+  subscription: string | null;
+  stats: string | null;
+  patientDetails: string | null;
+  sync: string | null;
+  auth: string | null;
+  upload: string | null;
+}
+
 interface AppState {
   // Patients data
   patients: Patient[];
   searchQuery: string;
   selectedFilter: string;
   
+  // Granular loading states
+  loading: LoadingState;
+  
+  // Error states
+  errors: ErrorState;
+  
   // App state
-  isLoading: boolean;
   isOffline: boolean;
   lastSyncTime: string | null;
   settings: AppSettings;
@@ -67,8 +94,13 @@ interface AppState {
   setSelectedFilter: (filter: string) => void;
   getFilteredPatients: () => Patient[];
   
+  // Granular loading state actions
+  setLoading: (key: keyof LoadingState, loading: boolean) => void;
+  setError: (key: keyof ErrorState, error: string | null) => void;
+  clearError: (key: keyof ErrorState) => void;
+  clearAllErrors: () => void;
+  
   // App state actions
-  setLoading: (loading: boolean) => void;
   setOffline: (offline: boolean) => void;
   updateSettings: (settings: Partial<AppSettings>) => void;
   
@@ -77,6 +109,12 @@ interface AppState {
   clearOfflineQueue: () => void;
   markPatientForSync: (id: string) => void;
   getPatientsNeedingSync: () => Patient[];
+  
+  // Convenience getters
+  isAnyLoading: () => boolean;
+  hasAnyError: () => boolean;
+  getLoadingKeys: () => (keyof LoadingState)[];
+  getErrorKeys: () => (keyof ErrorState)[];
 }
 
 const defaultSettings: AppSettings = {
