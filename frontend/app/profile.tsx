@@ -281,6 +281,15 @@ export default function ProfileScreen() {
 
         {/* Account Actions */}
         <View style={styles.actionsSection}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => router.push('/contacts-sync')}
+          >
+            <Ionicons name="phone-portrait" size={24} color="#666" />
+            <Text style={styles.actionText}>Contacts Integration</Text>
+            <Ionicons name="chevron-forward" size={20} color="#666" />
+          </TouchableOpacity>
+          
           <TouchableOpacity style={styles.actionButton}>
             <Ionicons name="settings" size={24} color="#666" />
             <Text style={styles.actionText}>Settings</Text>
