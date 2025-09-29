@@ -291,6 +291,31 @@ export const useAppStore = create<AppState>()(
       
       getPatientsNeedingSync: () => {
         return get().patients.filter(p => p._needs_sync);
+      },
+
+      // Convenience getters
+      isAnyLoading: () => {
+        const loading = get().loading;
+        return Object.values(loading).some(Boolean);
+      },
+
+      hasAnyError: () => {
+        const errors = get().errors;
+        return Object.values(errors).some(Boolean);
+      },
+
+      getLoadingKeys: () => {
+        const loading = get().loading;
+        return Object.entries(loading)
+          .filter(([_, isLoading]) => isLoading)
+          .map(([key, _]) => key as keyof LoadingState);
+      },
+
+      getErrorKeys: () => {
+        const errors = get().errors;
+        return Object.entries(errors)
+          .filter(([_, error]) => error !== null)
+          .map(([key, _]) => key as keyof ErrorState);
       }
     }),
     {
