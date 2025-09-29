@@ -187,7 +187,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Clear stored data
       await Promise.all([
-        SecureStore.deleteItemAsync('auth_token'),
+        SecureStorageAdapter.removeItem('auth_token'),
         AsyncStorage.removeItem('user_data'),
         AsyncStorage.removeItem('patients_cache') // Clear cached patients
       ]);
