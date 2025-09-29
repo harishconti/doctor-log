@@ -172,7 +172,7 @@ export default function Index() {
   };
 
   const addNewPatient = () => {
-    Alert.alert('Add Patient', 'Add new patient feature coming soon!');
+    router.push('/add-patient');
   };
 
   const renderPatientCard = ({ item }: { item: Patient }) => (
