@@ -144,26 +144,52 @@ export default function Index() {
   }, [searchQuery, selectedFilter, patients]);
 
   const toggleFavorite = async (patientId: string) => {
-    try {
-      const patient = patients.find(p => p.id === patientId);
-      if (!patient) return;
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient) return;
 
+    // Optimistic update - immediately update UI
+    const optimisticPatients = patients.map(p =>
+      p.id === patientId ? { ...p, is_favorite: !p.is_favorite } : p
+    );
+    setPatients(optimisticPatients);
+
+    // Haptic feedback for immediate user response
+    try {
+      const { settings } = useAppStore.getState();
+      if (settings.hapticEnabled) {
+        const { default: Haptics } = await import('expo-haptics');
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    } catch (hapticError) {
+      // Haptic feedback is optional, don't block the operation
+      console.log('Haptic feedback not available:', hapticError);
+    }
+
+    try {
+      // Make API call in background
       const response = await axios.put(
         `${BACKEND_URL}/api/patients/${patientId}`,
         { is_favorite: !patient.is_favorite }
       );
 
       if (response.data.success) {
-        const updatedPatients = patients.map(p =>
-          p.id === patientId ? { ...p, is_favorite: !p.is_favorite } : p
-        );
-        setPatients(updatedPatients);
-        
-        // Update cache
-        await AsyncStorage.setItem('patients_cache', JSON.stringify(updatedPatients));
+        // Update cache with successful response
+        await AsyncStorage.setItem('patients_cache', JSON.stringify(optimisticPatients));
+      } else {
+        throw new Error('API returned unsuccessful response');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update favorite status');
+      // Revert optimistic update on error
+      setPatients(patients);
+      
+      // Show error message
+      Alert.alert(
+        'Update Failed', 
+        'Failed to update favorite status. Please check your connection and try again.',
+        [{ text: 'OK' }]
+      );
+      
+      console.error('Failed to update favorite status:', error);
     }
   };
 
