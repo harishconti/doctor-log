@@ -595,7 +595,7 @@ async def get_subscription_info(current_user_id: str = Depends(get_current_user)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        return {"success": True, "subscription": user}
+        return {"success": True, "subscription": serialize_document(user)}
     except Exception as e:
         if "User not found" in str(e):
             raise e
