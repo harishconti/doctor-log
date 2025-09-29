@@ -10,11 +10,14 @@ import {
   Alert,
   Image,
   RefreshControl,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
+import { useRouter } from 'expo-router';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -46,6 +49,9 @@ interface Patient {
 }
 
 export default function Index() {
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  
   const [patients, setPatients] = useState<Patient[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,8 +60,17 @@ export default function Index() {
   const [refreshing, setRefreshing] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [authLoading, isAuthenticated]);
+
   // Load patients from API or local storage
   const loadPatients = useCallback(async (showRefresh = false) => {
+    if (!isAuthenticated) return;
+    
     try {
       if (showRefresh) setRefreshing(true);
       else setLoading(true);
@@ -94,11 +109,13 @@ export default function Index() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    loadPatients();
-  }, [loadPatients]);
+    if (isAuthenticated) {
+      loadPatients();
+    }
+  }, [isAuthenticated, loadPatients]);
 
   // Filter patients based on search and filter criteria
   useEffect(() => {
@@ -150,11 +167,18 @@ export default function Index() {
     }
   };
 
+  const navigateToProfile = () => {
+    router.push('/profile');
+  };
+
+  const addNewPatient = () => {
+    Alert.alert('Add Patient', 'Add new patient feature coming soon!');
+  };
+
   const renderPatientCard = ({ item }: { item: Patient }) => (
     <TouchableOpacity
       style={styles.patientCard}
       onPress={() => {
-        // TODO: Navigate to patient details
         Alert.alert('Patient Details', `Open details for ${item.name}`);
       }}
     >
@@ -238,10 +262,28 @@ export default function Index() {
     return buttons;
   };
 
+  // Show loading screen while checking auth
+  if (authLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color="#2ecc71" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Don't render anything if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color="#2ecc71" />
           <Text style={styles.loadingText}>Loading patients...</Text>
         </View>
       </SafeAreaView>
@@ -252,16 +294,24 @@ export default function Index() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Medical Contacts</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => {
-            // TODO: Navigate to add patient screen
-            Alert.alert('Add Patient', 'Add new patient feature coming soon');
-          }}
-        >
-          <Ionicons name="add" size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Medical Contacts</Text>
+          <Text style={styles.headerSubtitle}>Welcome, {user?.full_name?.split(' ')[0]}</Text>
+        </View>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={navigateToProfile}
+          >
+            <Ionicons name="person-circle" size={32} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={addNewPatient}
+          >
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Offline Banner */}
@@ -323,6 +373,11 @@ export default function Index() {
         <Text style={styles.statsText}>
           {filteredPatients.length} of {patients.length} patients
         </Text>
+        {user?.subscription_plan && (
+          <Text style={styles.planText}>
+            {user.subscription_plan.charAt(0).toUpperCase() + user.subscription_plan.slice(1)} Plan
+          </Text>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -341,6 +396,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     color: '#666',
+    marginTop: 16,
   },
   header: {
     flexDirection: 'row',
@@ -358,10 +414,25 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  headerLeft: {
+    flex: 1,
+  },
   headerTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 2,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  profileButton: {
+    padding: 4,
   },
   addButton: {
     width: 40,
@@ -530,10 +601,17 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e9ecef',
     backgroundColor: '#fff',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   statsText: {
     fontSize: 14,
     color: '#666',
-    textAlign: 'center',
+  },
+  planText: {
+    fontSize: 12,
+    color: '#2ecc71',
+    fontWeight: '500',
   },
 });
