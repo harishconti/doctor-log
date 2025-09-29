@@ -530,6 +530,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginBottom: 16,
   },
+  userAvatarContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
   userAvatar: {
     width: 80,
     height: 80,
@@ -537,7 +541,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#e8f5e8',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+  },
+  userAvatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  photoEditOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#2ecc71',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   userName: {
     fontSize: 24,
