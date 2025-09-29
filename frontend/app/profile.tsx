@@ -35,6 +35,8 @@ export default function ProfileScreen() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const [userPhoto, setUserPhoto] = useState<string>('');
+  const [updatingPhoto, setUpdatingPhoto] = useState(false);
 
   useEffect(() => {
     loadProfileData();
