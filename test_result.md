@@ -264,9 +264,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Authentication System Integration"
-  stuck_tasks:
-    - "Authentication System Integration"
+    - "Patient Details Screen"
+    - "Add/Edit Patient Forms"
+    - "Notes Management Screen"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
