@@ -250,8 +250,27 @@ export const useAppStore = create<AppState>()(
         return filtered;
       },
 
-      // App state
-      setLoading: (isLoading) => set({ isLoading }),
+      // Granular loading state actions
+      setLoading: (key, loading) => {
+        const currentLoading = get().loading;
+        set({ loading: { ...currentLoading, [key]: loading } });
+      },
+
+      setError: (key, error) => {
+        const currentErrors = get().errors;
+        set({ errors: { ...currentErrors, [key]: error } });
+      },
+
+      clearError: (key) => {
+        const currentErrors = get().errors;
+        set({ errors: { ...currentErrors, [key]: null } });
+      },
+
+      clearAllErrors: () => {
+        set({ errors: initialErrorState });
+      },
+
+      // App state actions
       setOffline: (isOffline) => set({ isOffline }),
       updateSettings: (newSettings) => {
         const settings = { ...get().settings, ...newSettings };
