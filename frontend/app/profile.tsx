@@ -148,6 +148,116 @@ export default function ProfileScreen() {
     );
   };
 
+  const updateProfilePhoto = async () => {
+    Alert.alert(
+      'Update Profile Photo',
+      'Choose how to update your profile photo',
+      [
+        { text: 'Camera', onPress: takeProfilePhoto },
+        { text: 'Photo Library', onPress: pickProfilePhoto },
+        userPhoto ? { text: 'Remove Photo', onPress: removeProfilePhoto, style: 'destructive' } : null,
+        { text: 'Cancel', style: 'cancel' }
+      ].filter(Boolean)
+    );
+  };
+
+  const pickProfilePhoto = async () => {
+    try {
+      const { default: ImagePicker } = await import('expo-image-picker');
+      
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera roll permissions are required to select photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+        base64: true
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        await saveProfilePhoto(result.assets[0].base64);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const takeProfilePhoto = async () => {
+    try {
+      const { default: ImagePicker } = await import('expo-image-picker');
+      
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera permissions are required to take photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+        base64: true
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        await saveProfilePhoto(result.assets[0].base64);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to take photo');
+    }
+  };
+
+  const saveProfilePhoto = async (photo: string) => {
+    try {
+      setUpdatingPhoto(true);
+      setUserPhoto(photo);
+      
+      // Note: You would implement a backend endpoint to save user profile photo
+      // For now, we'll just save it locally
+      await AsyncStorage.setItem(`user_photo_${user?.id}`, photo);
+      
+      Alert.alert('Success', 'Profile photo updated successfully!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save profile photo');
+      setUserPhoto(''); // Revert on error
+    } finally {
+      setUpdatingPhoto(false);
+    }
+  };
+
+  const removeProfilePhoto = async () => {
+    try {
+      setUpdatingPhoto(true);
+      setUserPhoto('');
+      
+      await AsyncStorage.removeItem(`user_photo_${user?.id}`);
+      
+      Alert.alert('Success', 'Profile photo removed successfully!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to remove profile photo');
+    } finally {
+      setUpdatingPhoto(false);
+    }
+  };
+
+  const loadUserPhoto = async () => {
+    try {
+      if (user?.id) {
+        const savedPhoto = await AsyncStorage.getItem(`user_photo_${user.id}`);
+        if (savedPhoto) {
+          setUserPhoto(savedPhoto);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user photo:', error);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
