@@ -1,9 +1,50 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+// Platform-specific secure storage
+const SecureStorageAdapter = {
+  async setItem(key: string, value: string) {
+    if (Platform.OS === 'web') {
+      // Use localStorage for web
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, value);
+      }
+    } else {
+      // Use SecureStore for native platforms
+      await SecureStore.setItemAsync(key, value);
+    }
+  },
+
+  async getItem(key: string): Promise<string | null> {
+    if (Platform.OS === 'web') {
+      // Use localStorage for web
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem(key);
+      }
+      return null;
+    } else {
+      // Use SecureStore for native platforms
+      return await SecureStore.getItemAsync(key);
+    }
+  },
+
+  async removeItem(key: string) {
+    if (Platform.OS === 'web') {
+      // Use localStorage for web
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } else {
+      // Use SecureStore for native platforms
+      await SecureStore.deleteItemAsync(key);
+    }
+  }
+};
 
 // Types
 interface User {
