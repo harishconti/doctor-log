@@ -1,0 +1,199 @@
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+// Types
+interface User {
+  id: string;
+  email: string;
+  phone: string;
+  full_name: string;
+  medical_specialty: string;
+  subscription_plan: 'regular' | 'pro';
+  subscription_status: 'active' | 'inactive' | 'trial';
+  trial_end_date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (userData: RegisterData) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+}
+
+interface RegisterData {
+  email: string;
+  phone: string;
+  password: string;
+  full_name: string;
+  medical_specialty: string;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const isAuthenticated = !!user && !!token;
+
+  // Load stored auth data on app start
+  useEffect(() => {
+    loadStoredAuth();
+  }, []);
+
+  const loadStoredAuth = async () => {
+    try {
+      const [storedToken, storedUser] = await Promise.all([
+        SecureStore.getItemAsync('auth_token'),
+        AsyncStorage.getItem('user_data')
+      ]);
+
+      if (storedToken && storedUser) {
+        setToken(storedToken);
+        setUser(JSON.parse(storedUser));
+        
+        // Set axios default authorization header
+        axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        
+        // Verify token is still valid
+        try {
+          await axios.get(`${BACKEND_URL}/api/auth/me`);
+        } catch (error) {
+          // Token is invalid, clear stored data
+          await logout();
+        }
+      }
+    } catch (error) {
+      console.error('Error loading stored auth:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await axios.post(`${BACKEND_URL}/api/auth/login`, {
+        email,
+        password
+      });
+
+      const { access_token, user: userData } = response.data;
+      
+      // Store auth data
+      await Promise.all([
+        SecureStore.setItemAsync('auth_token', access_token),
+        AsyncStorage.setItem('user_data', JSON.stringify(userData))
+      ]);
+      
+      setToken(access_token);
+      setUser(userData);
+      
+      // Set axios default authorization header
+      axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Login failed');
+    }
+  };
+
+  const register = async (userData: RegisterData) => {
+    try {
+      const response = await axios.post(`${BACKEND_URL}/api/auth/register`, userData);
+      
+      const { access_token, user: newUser } = response.data;
+      
+      // Store auth data
+      await Promise.all([
+        SecureStore.setItemAsync('auth_token', access_token),
+        AsyncStorage.setItem('user_data', JSON.stringify(newUser))
+      ]);
+      
+      setToken(access_token);
+      setUser(newUser);
+      
+      // Set axios default authorization header
+      axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Registration failed');
+    }
+  };
+
+  const logout = async () => {
+    try {
+      // Clear stored data
+      await Promise.all([
+        SecureStore.deleteItemAsync('auth_token'),
+        AsyncStorage.removeItem('user_data'),
+        AsyncStorage.removeItem('patients_cache') // Clear cached patients
+      ]);
+      
+      // Clear state
+      setToken(null);
+      setUser(null);
+      
+      // Clear axios default authorization header
+      delete axios.defaults.headers.common['Authorization'];
+      
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
+
+  const refreshUser = async () => {
+    try {
+      if (!token) return;
+      
+      const response = await axios.get(`${BACKEND_URL}/api/auth/me`);
+      const userData = response.data.user;
+      
+      await AsyncStorage.setItem('user_data', JSON.stringify(userData));
+      setUser(userData);
+      
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+      // If refresh fails, logout user
+      await logout();
+    }
+  };
+
+  const value: AuthContextType = {
+    user,
+    token,
+    isLoading,
+    isAuthenticated,
+    login,
+    register,
+    logout,
+    refreshUser
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
