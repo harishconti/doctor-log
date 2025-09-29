@@ -127,13 +127,17 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              console.log('Starting logout process...');
               await logout();
-              // Force navigation to login and clear navigation stack
-              router.dismissAll();
+              console.log('Logout completed, navigating to login...');
+              
+              // Use replace to completely reset navigation stack
               router.replace('/login');
             } catch (error) {
               console.error('Logout error:', error);
-              // Even if logout fails, navigate to login
+              Alert.alert('Logout Error', error.message || 'Failed to logout completely');
+              
+              // Force navigation even if logout partially failed
               router.replace('/login');
             }
           }
