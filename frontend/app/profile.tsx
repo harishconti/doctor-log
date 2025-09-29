@@ -42,15 +42,49 @@ export default function ProfileScreen() {
 
   const loadProfileData = async () => {
     try {
-      const [subscriptionResponse, statsResponse] = await Promise.all([
+      // Use Promise.allSettled for better error handling
+      const [subscriptionResult, statsResult] = await Promise.allSettled([
         axios.get(`${BACKEND_URL}/api/subscription`),
         axios.get(`${BACKEND_URL}/api/stats`)
       ]);
 
-      setSubscriptionInfo(subscriptionResponse.data.subscription);
-      setStats(statsResponse.data.stats);
+      // Handle subscription data
+      if (subscriptionResult.status === 'fulfilled') {
+        setSubscriptionInfo(subscriptionResult.value.data.subscription);
+      } else {
+        console.error('Error loading subscription data:', subscriptionResult.reason);
+        // Set default subscription info or show error state
+        setSubscriptionInfo({
+          subscription_plan: 'regular',
+          subscription_status: 'unknown',
+          trial_end_date: new Date().toISOString()
+        });
+      }
+
+      // Handle stats data
+      if (statsResult.status === 'fulfilled') {
+        setStats(statsResult.value.data.stats);
+      } else {
+        console.error('Error loading stats data:', statsResult.reason);
+        // Set default stats or show error state
+        setStats({
+          total_patients: 0,
+          favorite_patients: 0,
+          groups: []
+        });
+      }
+
+      // Show error message if both failed
+      if (subscriptionResult.status === 'rejected' && statsResult.status === 'rejected') {
+        Alert.alert(
+          'Connection Error',
+          'Unable to load profile data. Please check your internet connection and try again.',
+          [{ text: 'OK' }]
+        );
+      }
     } catch (error) {
-      console.error('Error loading profile data:', error);
+      console.error('Unexpected error loading profile data:', error);
+      Alert.alert('Error', 'An unexpected error occurred while loading profile data.');
     } finally {
       setIsLoading(false);
     }
