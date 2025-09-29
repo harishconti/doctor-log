@@ -118,29 +118,70 @@ export default function PatientDetailsScreen() {
     }
   };
 
-  const makePhoneCall = (phoneNumber: string) => {
-    if (phoneNumber) {
+  const makePhoneCall = async (phoneNumber: string) => {
+    if (!phoneNumber) return;
+    
+    try {
+      // Import phone integration dynamically
+      const { PhoneIntegration } = await import('../../utils/phoneIntegration');
+      
       Alert.alert(
         'Call Patient',
-        `Call ${phoneNumber}?`,
+        `Call ${patient?.name} at ${phoneNumber}?`,
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Call', onPress: () => Alert.alert('Phone Call', 'Phone dialing feature would open here') }
+          { 
+            text: 'Call', 
+            onPress: async () => {
+              const success = await PhoneIntegration.makePhoneCall(phoneNumber, patient?.name);
+              if (!success) {
+                Alert.alert('Error', 'Unable to make phone call. Please check if your device supports calling.');
+              }
+            }
+          },
+          {
+            text: 'SMS',
+            onPress: async () => {
+              const success = await PhoneIntegration.sendSMS(phoneNumber, `Hello ${patient?.name}, this is a message from your medical practitioner.`);
+              if (!success) {
+                Alert.alert('Error', 'Unable to send SMS. Please check if your device supports messaging.');
+              }
+            }
+          }
         ]
       );
+    } catch (error) {
+      Alert.alert('Error', 'Phone integration not available');
     }
   };
 
-  const sendEmail = (email: string) => {
-    if (email) {
+  const sendEmail = async (email: string) => {
+    if (!email) return;
+    
+    try {
+      const { PhoneIntegration } = await import('../../utils/phoneIntegration');
+      
       Alert.alert(
         'Send Email',
-        `Send email to ${email}?`,
+        `Send email to ${patient?.name} at ${email}?`,
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Send', onPress: () => Alert.alert('Email', 'Email composition would open here') }
+          { 
+            text: 'Send', 
+            onPress: async () => {
+              const subject = `Medical Consultation - ${patient?.name}`;
+              const body = `Dear ${patient?.name},\n\nI hope this message finds you well.\n\nBest regards,\nYour Medical Practitioner`;
+              
+              const success = await PhoneIntegration.sendEmail(email, subject, body);
+              if (!success) {
+                Alert.alert('Error', 'Unable to open email client.');
+              }
+            }
+          }
         ]
       );
+    } catch (error) {
+      Alert.alert('Error', 'Email integration not available');
     }
   };
 
