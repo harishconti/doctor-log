@@ -179,7 +179,7 @@ export default function Index() {
     <TouchableOpacity
       style={styles.patientCard}
       onPress={() => {
-        Alert.alert('Patient Details', `Open details for ${item.name}`);
+        router.push(`/patient/${item.id}`);
       }}
     >
       <View style={styles.cardContent}>
