@@ -303,9 +303,29 @@ export default function ProfileScreen() {
 
         {/* User Info */}
         <View style={styles.userSection}>
-          <View style={styles.userAvatar}>
-            <Ionicons name="person" size={48} color="#2ecc71" />
-          </View>
+          <TouchableOpacity 
+            style={styles.userAvatarContainer} 
+            onPress={updateProfilePhoto}
+            disabled={updatingPhoto}
+          >
+            {userPhoto ? (
+              <Image 
+                source={{ uri: `data:image/jpeg;base64,${userPhoto}` }}
+                style={styles.userAvatarImage}
+              />
+            ) : (
+              <View style={styles.userAvatar}>
+                <Ionicons name="person" size={48} color="#2ecc71" />
+              </View>
+            )}
+            <View style={styles.photoEditOverlay}>
+              {updatingPhoto ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="camera" size={20} color="#fff" />
+              )}
+            </View>
+          </TouchableOpacity>
           <Text style={styles.userName}>{user?.full_name}</Text>
           <Text style={styles.userEmail}>{user?.email}</Text>
           <Text style={styles.userSpecialty}>
