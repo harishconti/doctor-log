@@ -145,7 +145,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Store auth data
       await Promise.all([
-        SecureStore.setItemAsync('auth_token', access_token),
+        SecureStorageAdapter.setItem('auth_token', access_token),
         AsyncStorage.setItem('user_data', JSON.stringify(userData))
       ]);
       
