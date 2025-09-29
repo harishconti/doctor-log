@@ -40,6 +40,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     loadProfileData();
+    loadUserPhoto();
   }, []);
 
   const loadProfileData = async () => {
