@@ -92,8 +92,16 @@ export default function ProfileScreen() {
           text: 'Sign Out',
           style: 'destructive',
           onPress: async () => {
-            await logout();
-            router.replace('/login');
+            try {
+              await logout();
+              // Force navigation to login and clear navigation stack
+              router.dismissAll();
+              router.replace('/login');
+            } catch (error) {
+              console.error('Logout error:', error);
+              // Even if logout fails, navigate to login
+              router.replace('/login');
+            }
           }
         }
       ]
