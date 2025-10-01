@@ -14,17 +14,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+import { useAppStore } from '../store/useAppStore';
 
 export default function ContactsSyncScreen() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
   
-  const [loading, setLoading] = useState(true);
+  const { patients, loading: storeLoading } = useAppStore();
+
   const [syncing, setSyncing] = useState(false);
-  const [patients, setPatients] = useState([]);
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [callLogs, setCallLogs] = useState([]);
@@ -37,20 +35,12 @@ export default function ContactsSyncScreen() {
       return;
     }
     
-    loadData();
+    loadScreenData();
     checkPhoneCapabilities();
   }, [isAuthenticated]);
 
-  const loadData = async () => {
+  const loadScreenData = async () => {
     try {
-      setLoading(true);
-      
-      // Load patients
-      const response = await axios.get(`${BACKEND_URL}/api/patients`);
-      if (response.data.success) {
-        setPatients(response.data.patients);
-      }
-
       // Load sync settings
       const syncSetting = await AsyncStorage.getItem('contacts_sync_enabled');
       setSyncEnabled(syncSetting === 'true');
@@ -65,9 +55,7 @@ export default function ContactsSyncScreen() {
       setCallLogs(logs.slice(0, 10)); // Show last 10 calls
 
     } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error loading screen-specific data:', error);
     }
   };
 
@@ -116,7 +104,7 @@ export default function ContactsSyncScreen() {
         
         await AsyncStorage.setItem('contacts_sync_enabled', 'true');
         setSyncEnabled(true);
-        await loadData(); // Refresh data
+        await loadScreenData(); // Refresh data
       } else {
         Alert.alert(
           'Sync Failed',
@@ -151,7 +139,7 @@ export default function ContactsSyncScreen() {
                 Alert.alert('Success', 'Medical contacts removed from device');
                 await AsyncStorage.setItem('contacts_sync_enabled', 'false');
                 setSyncEnabled(false);
-                await loadData();
+                await loadScreenData();
               } else {
                 Alert.alert('Error', 'Failed to remove contacts');
               }
@@ -198,7 +186,7 @@ export default function ContactsSyncScreen() {
     }
   };
 
-  if (loading) {
+  if (storeLoading.patients) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>

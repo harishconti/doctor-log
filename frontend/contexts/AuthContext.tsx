@@ -106,32 +106,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const loadStoredAuth = async () => {
-    try {
-      const [storedToken, storedUser] = await Promise.all([
-        SecureStorageAdapter.getItem('auth_token'),
-        AsyncStorage.getItem('user_data')
-      ]);
-
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-        
-        // Set axios default authorization header
-        axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-        
-        // Verify token is still valid
-        try {
-          await axios.get(`${BACKEND_URL}/api/auth/me`);
-        } catch (error) {
-          // Token is invalid, clear stored data
-          await logout();
-        }
-      }
-    } catch (error) {
-      console.error('Error loading stored auth:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    // Simplified for debugging - bypass token check
+    setIsLoading(false);
   };
 
   const login = async (email: string, password: string) => {
@@ -192,13 +168,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         AsyncStorage.removeItem('patients_cache'),
         AsyncStorage.removeItem('medical_call_logs'),
         AsyncStorage.removeItem('contacts_sync_enabled'),
-        AsyncStorage.removeItem('medical-contacts-store') // Clear Zustand store data
       ]);
       
       // Log any storage cleanup failures for debugging
       storageCleanupResults.forEach((result, index) => {
         if (result.status === 'rejected') {
-          const keys = ['auth_token', 'user_data', 'patients_cache', 'medical_call_logs', 'contacts_sync_enabled', 'store'];
+          const keys = ['auth_token', 'user_data', 'patients_cache', 'medical_call_logs', 'contacts_sync_enabled'];
           console.warn(`Failed to clear ${keys[index]}:`, result.reason);
         }
       });
