@@ -1,22 +1,36 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional
 from datetime import datetime, timedelta
 import uuid
+import re
 
 class UserBase(BaseModel):
     email: EmailStr
-    phone: Optional[str] = ""
-    full_name: str
-    medical_specialty: Optional[str] = "general"
+    phone: Optional[str] = Field(default="", max_length=25)
+    full_name: str = Field(..., min_length=2, max_length=100)
+    medical_specialty: Optional[str] = Field(default="general", max_length=100)
 
 class UserCreate(UserBase):
-    password: str
+    password: str = Field(
+        ...,
+        min_length=8,
+        max_length=100,
+        description="Password must be at least 8 characters long and contain at least one letter and one number."
+    )
+
+    @validator('password')
+    def password_complexity(cls, v):
+        if not re.search(r'[A-Za-z]', v):
+            raise ValueError('Password must contain at least one letter')
+        if not re.search(r'\d', v):
+            raise ValueError('Password must contain at least one number')
+        return v
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
-    phone: Optional[str] = None
-    full_name: Optional[str] = None
-    medical_specialty: Optional[str] = None
+    phone: Optional[str] = Field(default=None, max_length=25)
+    full_name: Optional[str] = Field(default=None, min_length=2, max_length=100)
+    medical_specialty: Optional[str] = Field(default=None, max_length=100)
 
 class UserInDBBase(UserBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
