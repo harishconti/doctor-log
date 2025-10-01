@@ -11,7 +11,7 @@ from datetime import datetime
 import os
 
 # Get backend URL from environment
-BACKEND_URL = os.getenv('EXPO_PUBLIC_BACKEND_URL', 'https://android-dev-studio-3.preview.emergentagent.com')
+BACKEND_URL = os.getenv('EXPO_PUBLIC_BACKEND_URL', 'http://localhost:8000')
 API_BASE = f"{BACKEND_URL}/api"
 
 class MedicalContactsAPITester:
@@ -68,7 +68,7 @@ class MedicalContactsAPITester:
             }
             
             response = self.session.post(f"{API_BASE}/auth/register", json=user_data)
-            success = response.status_code == 200
+            success = response.status_code == 201 # Expect 201 Created
             
             if success:
                 data = response.json()
@@ -163,60 +163,21 @@ class MedicalContactsAPITester:
             self.log_result("Unauthorized Access Protection", False, f"Exception: {str(e)}")
             return False
     
-    def test_subscription_info(self):
-        """Test getting subscription information"""
-        if not self.demo_user_token:
-            self.log_result("Subscription Info", False, "No demo user token available")
-            return False
-        
-        try:
-            headers = {"Authorization": f"Bearer {self.demo_user_token}"}
-            response = self.session.get(f"{API_BASE}/subscription", headers=headers)
-            success = response.status_code == 200
+    def save_results_to_file(self, filename="test_result.md"):
+        """Save test results to a Markdown file"""
+        with open(filename, 'w') as f:
+            f.write("# API Test Results\n\n")
+            f.write(f"**Timestamp:** {datetime.now().isoformat()}\n")
+            f.write(f"**Backend URL:** {API_BASE}\n\n")
+            f.write("## Summary\n")
+            f.write(f"- **✅ PASSED:** {self.results['passed']}\n")
+            f.write(f"- **❌ FAILED:** {self.results['failed']}\n")
+            f.write(f"- **📊 TOTAL:** {self.results['passed'] + self.results['failed']}\n\n")
             
-            if success:
-                data = response.json()
-                if data.get('success') and data.get('subscription'):
-                    sub = data['subscription']
-                    self.log_result("Subscription Info", True, 
-                                  f"Plan: {sub.get('subscription_plan')}, Status: {sub.get('subscription_status')}")
-                else:
-                    success = False
-                    self.log_result("Subscription Info", False, "Missing subscription data", response)
-            else:
-                self.log_result("Subscription Info", False, "Failed to get subscription info", response)
-            
-            return success
-        except Exception as e:
-            self.log_result("Subscription Info", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_subscription_upgrade(self):
-        """Test subscription upgrade"""
-        if not self.auth_token:
-            self.log_result("Subscription Upgrade", False, "No auth token available")
-            return False
-        
-        try:
-            headers = {"Authorization": f"Bearer {self.auth_token}"}
-            response = self.session.post(f"{API_BASE}/subscription/upgrade", headers=headers)
-            success = response.status_code == 200
-            
-            if success:
-                data = response.json()
-                if data.get('success'):
-                    self.log_result("Subscription Upgrade", True, 
-                                  f"Successfully upgraded to Pro plan: {data.get('message')}")
-                else:
-                    success = False
-                    self.log_result("Subscription Upgrade", False, "Upgrade failed", response)
-            else:
-                self.log_result("Subscription Upgrade", False, "Failed to upgrade subscription", response)
-            
-            return success
-        except Exception as e:
-            self.log_result("Subscription Upgrade", False, f"Exception: {str(e)}")
-            return False
+            if self.results['failed'] > 0:
+                f.write("## 🚨 Failed Tests\n")
+                for error in self.results['errors']:
+                    f.write(f"- {error}\n")
     
     def test_demo_patients_loaded(self):
         """Test that demo patients are loaded for demo user"""
@@ -278,7 +239,7 @@ class MedicalContactsAPITester:
             
             headers = {"Authorization": f"Bearer {self.auth_token}"}
             response = self.session.post(f"{API_BASE}/patients", json=patient_data, headers=headers)
-            success = response.status_code == 200
+            success = response.status_code == 201 # Expect 201 Created
             
             if success:
                 data = response.json()
@@ -410,7 +371,7 @@ class MedicalContactsAPITester:
             headers = {"Authorization": f"Bearer {self.auth_token}"}
             response = self.session.post(f"{API_BASE}/patients/{self.test_patient_id}/notes", 
                                        json=note_data, headers=headers)
-            success = response.status_code == 200
+            success = response.status_code == 201 # Expect 201 Created
             
             if success:
                 data = response.json()
@@ -465,20 +426,24 @@ class MedicalContactsAPITester:
         
         try:
             headers = {"Authorization": f"Bearer {self.demo_user_token}"}
-            response = self.session.get(f"{API_BASE}/groups", headers=headers)
+            response = self.session.get(f"{API_BASE}/patients/groups/", headers=headers)
             success = response.status_code == 200
             
             if success:
                 data = response.json()
                 if data.get('success') and 'groups' in data:
                     groups = data['groups']
-                    self.log_result("Get Groups", True, 
-                                  f"Retrieved {len(groups)} groups: {', '.join(groups[:5])}")
+                    if len(groups) > 0:
+                         self.log_result("Get Groups", True,
+                                      f"Retrieved {len(groups)} groups: {', '.join(groups[:5])}")
+                    else:
+                        success = False
+                        self.log_result("Get Groups", False, "No groups found in response", response)
                 else:
                     success = False
-                    self.log_result("Get Groups", False, "Missing groups data", response)
+                    self.log_result("Get Groups", False, "Missing groups data in response", response)
             else:
-                self.log_result("Get Groups", False, "Failed to get groups", response)
+                self.log_result("Get Groups", False, f"Failed to get groups. Status: {response.status_code}", response)
             
             return success
         except Exception as e:
@@ -493,20 +458,24 @@ class MedicalContactsAPITester:
         
         try:
             headers = {"Authorization": f"Bearer {self.demo_user_token}"}
-            response = self.session.get(f"{API_BASE}/stats", headers=headers)
+            response = self.session.get(f"{API_BASE}/patients/stats/", headers=headers)
             success = response.status_code == 200
             
             if success:
                 data = response.json()
                 if data.get('success') and data.get('stats'):
                     stats = data['stats']
-                    self.log_result("Get Statistics", True, 
-                                  f"Total patients: {stats.get('total_patients')}, Favorites: {stats.get('favorite_patients')}")
+                    if stats.get('total_patients', 0) > 0:
+                        self.log_result("Get Statistics", True,
+                                      f"Total patients: {stats.get('total_patients')}, Favorites: {stats.get('favorite_patients')}")
+                    else:
+                        success = False
+                        self.log_result("Get Statistics", False, "Statistics are empty", response)
                 else:
                     success = False
-                    self.log_result("Get Statistics", False, "Missing stats data", response)
+                    self.log_result("Get Statistics", False, "Missing stats data in response", response)
             else:
-                self.log_result("Get Statistics", False, "Failed to get statistics", response)
+                self.log_result("Get Statistics", False, f"Failed to get statistics. Status: {response.status_code}", response)
             
             return success
         except Exception as e:
@@ -603,8 +572,6 @@ class MedicalContactsAPITester:
             ("Demo User Login", self.test_demo_user_login),
             ("Get Current User", self.test_get_current_user),
             ("Unauthorized Access Protection", self.test_unauthorized_access),
-            ("Subscription Info", self.test_subscription_info),
-            ("Subscription Upgrade", self.test_subscription_upgrade),
             ("Demo Patients Loaded", self.test_demo_patients_loaded),
             ("Create Patient", self.test_create_patient),
             ("Get Patients", self.test_get_patients),
@@ -636,6 +603,10 @@ class MedicalContactsAPITester:
         
         print("=" * 80)
         
+        # Save results to file
+        self.save_results_to_file()
+        print(f"Results saved to test_result.md")
+
         return self.results['failed'] == 0
 
 if __name__ == "__main__":

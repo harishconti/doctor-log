@@ -222,12 +222,23 @@ class MedicalContactsBackup:
         """Close database connection"""
         self.client.close()
 
+    async def clear_database(self):
+        """
+        Drop all relevant collections from the database for a clean state.
+        """
+        collections_to_drop = ['users', 'patients', 'counters']
+        print("Clearing database...")
+        for collection_name in collections_to_drop:
+            print(f"  - Dropping collection: {collection_name}")
+            await self.db[collection_name].drop()
+        print("Database cleared successfully.")
+
 # CLI Interface
 async def main():
     import argparse
     
     parser = argparse.ArgumentParser(description='Medical Contacts Database Backup Tool')
-    parser.add_argument('action', choices=['backup', 'restore', 'export', 'list', 'stats'], 
+    parser.add_argument('action', choices=['backup', 'restore', 'export', 'list', 'stats', 'clear'],
                        help='Action to perform')
     parser.add_argument('--file', help='Backup file path (for restore)')
     parser.add_argument('--user', help='User email (for export)')
@@ -277,6 +288,9 @@ async def main():
             stats = await backup_manager.get_database_stats()
             print("\n📊 Database Statistics:")
             print(json.dumps(stats, indent=2, default=str))
+
+        elif args.action == 'clear':
+            await backup_manager.clear_database()
     
     except Exception as e:
         print(f"\n❌ Error: {e}")
