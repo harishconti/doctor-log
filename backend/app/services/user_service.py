@@ -3,6 +3,7 @@ from app.schemas.user import UserCreate, UserLogin
 from app.core.security import hash_password, verify_password
 from app.models.user import User
 from bson import ObjectId
+from typing import Optional
 import uuid
 from datetime import datetime, timedelta
 
@@ -28,7 +29,7 @@ async def create_user(user_data: UserCreate) -> User:
     # Return a User model instance
     return User(**user_dict)
 
-async def authenticate_user(user_data: UserLogin) -> User | None:
+async def authenticate_user(user_data: UserLogin) -> Optional[User]:
     """
     Authenticates a user. Returns the user object if successful, otherwise None.
     """
