@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export interface Patient {
   id: string;
@@ -88,6 +91,7 @@ interface AppState {
   addPatient: (patient: Patient) => void;
   updatePatient: (id: string, updates: Partial<Patient>) => void;
   removePatient: (id: string) => void;
+  toggleFavorite: (patientId: string) => Promise<void>;
   
   // Search and filter
   setSearchQuery: (query: string) => void;
@@ -215,6 +219,48 @@ export const useAppStore = create<AppState>()(
             id,
             timestamp: new Date().toISOString()
           });
+        }
+      },
+
+      toggleFavorite: async (patientId) => {
+        const originalPatients = get().patients;
+        const patient = originalPatients.find(p => p.id === patientId);
+        if (!patient) return;
+
+        // Optimistic update
+        const optimisticPatients = originalPatients.map(p =>
+          p.id === patientId ? { ...p, is_favorite: !p.is_favorite } : p
+        );
+        set({ patients: optimisticPatients });
+
+        // Haptic feedback
+        try {
+          const { settings } = get();
+          if (settings.hapticEnabled) {
+            const { default: Haptics } = await import('expo-haptics');
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
+        } catch (hapticError) {
+          console.log('Haptic feedback not available:', hapticError);
+        }
+
+        try {
+          const response = await axios.put(
+            `${BACKEND_URL}/api/patients/${patientId}`,
+            { is_favorite: !patient.is_favorite }
+          );
+
+          if (response.data.success) {
+            // Update cache
+            await AsyncStorage.setItem('patients_cache', JSON.stringify(optimisticPatients));
+          } else {
+            throw new Error('API returned unsuccessful response');
+          }
+        } catch (error) {
+          // Revert on error
+          set({ patients: originalPatients });
+          // Re-throw error to be handled by the component
+          throw error;
         }
       },
 

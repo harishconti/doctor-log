@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,47 +18,30 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import { useAppStore, Patient } from '../store/useAppStore';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
-
-// Types
-interface PatientNote {
-  id: string;
-  content: string;
-  timestamp: string;
-  visit_type: string;
-  created_by: string;
-}
-
-interface Patient {
-  id: string;
-  patient_id: string;
-  name: string;
-  phone: string;
-  email: string;
-  address: string;
-  location: string;
-  initial_complaint: string;
-  initial_diagnosis: string;
-  photo: string;
-  group: string;
-  is_favorite: boolean;
-  notes: PatientNote[];
-  created_at: string;
-  updated_at: string;
-}
 
 export default function Index() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [isOffline, setIsOffline] = useState(false);
+
+  const {
+    patients,
+    searchQuery,
+    selectedFilter,
+    loading,
+    isOffline,
+    getFilteredPatients,
+    setPatients,
+    setSearchQuery,
+    setSelectedFilter,
+    setLoading,
+    setOffline,
+    toggleFavorite,
+  } = useAppStore();
+
+  const [refreshing, setRefreshing] = React.useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -73,7 +56,7 @@ export default function Index() {
     
     try {
       if (showRefresh) setRefreshing(true);
-      else setLoading(true);
+      else setLoading('patients', true);
 
       // Try to fetch from API first
       const response = await axios.get(`${BACKEND_URL}/api/patients`, {
@@ -83,11 +66,10 @@ export default function Index() {
       if (response.data.success) {
         const fetchedPatients = response.data.patients;
         setPatients(fetchedPatients);
-        setFilteredPatients(fetchedPatients);
         
         // Save to local storage for offline access
         await AsyncStorage.setItem('patients_cache', JSON.stringify(fetchedPatients));
-        setIsOffline(false);
+        setOffline(false);
       }
     } catch (error) {
       console.log('API Error, loading from cache:', error);
@@ -98,18 +80,17 @@ export default function Index() {
         if (cachedData) {
           const cachedPatients = JSON.parse(cachedData);
           setPatients(cachedPatients);
-          setFilteredPatients(cachedPatients);
-          setIsOffline(true);
+          setOffline(true);
         }
       } catch (cacheError) {
         console.error('Cache load error:', cacheError);
         Alert.alert('Error', 'Failed to load patients data');
       }
     } finally {
-      setLoading(false);
+      setLoading('patients', false);
       setRefreshing(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, setPatients, setLoading, setOffline]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -117,78 +98,15 @@ export default function Index() {
     }
   }, [isAuthenticated, loadPatients]);
 
-  // Filter patients based on search and filter criteria
-  useEffect(() => {
-    let filtered = patients;
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(patient =>
-        patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        patient.patient_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        patient.phone.includes(searchQuery) ||
-        patient.email.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Apply category filter
-    if (selectedFilter !== 'all') {
-      if (selectedFilter === 'favorites') {
-        filtered = filtered.filter(patient => patient.is_favorite);
-      } else {
-        filtered = filtered.filter(patient => patient.group === selectedFilter);
-      }
-    }
-
-    setFilteredPatients(filtered);
-  }, [searchQuery, selectedFilter, patients]);
-
-  const toggleFavorite = async (patientId: string) => {
-    const patient = patients.find(p => p.id === patientId);
-    if (!patient) return;
-
-    // Optimistic update - immediately update UI
-    const optimisticPatients = patients.map(p =>
-      p.id === patientId ? { ...p, is_favorite: !p.is_favorite } : p
-    );
-    setPatients(optimisticPatients);
-
-    // Haptic feedback for immediate user response
+  const handleToggleFavorite = async (patientId: string) => {
     try {
-      const { settings } = useAppStore.getState();
-      if (settings.hapticEnabled) {
-        const { default: Haptics } = await import('expo-haptics');
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    } catch (hapticError) {
-      // Haptic feedback is optional, don't block the operation
-      console.log('Haptic feedback not available:', hapticError);
-    }
-
-    try {
-      // Make API call in background
-      const response = await axios.put(
-        `${BACKEND_URL}/api/patients/${patientId}`,
-        { is_favorite: !patient.is_favorite }
-      );
-
-      if (response.data.success) {
-        // Update cache with successful response
-        await AsyncStorage.setItem('patients_cache', JSON.stringify(optimisticPatients));
-      } else {
-        throw new Error('API returned unsuccessful response');
-      }
+      await toggleFavorite(patientId);
     } catch (error) {
-      // Revert optimistic update on error
-      setPatients(patients);
-      
-      // Show error message
       Alert.alert(
         'Update Failed', 
         'Failed to update favorite status. Please check your connection and try again.',
         [{ text: 'OK' }]
       );
-      
       console.error('Failed to update favorite status:', error);
     }
   };
@@ -200,6 +118,8 @@ export default function Index() {
   const addNewPatient = () => {
     router.push('/add-patient');
   };
+
+  const filteredPatients = getFilteredPatients();
 
   const renderPatientCard = ({ item }: { item: Patient }) => (
     <TouchableOpacity
@@ -235,7 +155,7 @@ export default function Index() {
 
         <View style={styles.cardActions}>
           <TouchableOpacity
-            onPress={() => toggleFavorite(item.id)}
+            onPress={() => handleToggleFavorite(item.id)}
             style={styles.favoriteButton}
           >
             <Ionicons
