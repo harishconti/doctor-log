@@ -12,6 +12,8 @@ database = client[settings.DB_NAME]
 UserCollection = database.get_collection("users")
 PatientCollection = database.get_collection("patients")
 CounterCollection = database.get_collection("counters")
+ClinicalNoteCollection = database.get_collection("clinical_notes")
+DocumentCollection = database.get_collection("documents")
 
 async def get_db():
     """

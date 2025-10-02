@@ -6,7 +6,6 @@ import re
 from enum import Enum
 
 class UserPlan(str, Enum):
-    TRIAL = "trial"
     BASIC = "basic"
     PRO = "pro"
 
@@ -23,7 +22,7 @@ class UserBase(BaseModel):
     medical_specialty: Optional[str] = Field(default="general", max_length=100)
 
 class UserCreate(UserBase):
-    plan: UserPlan = UserPlan.TRIAL
+    plan: UserPlan = UserPlan.BASIC
     password: str = Field(
         ...,
         min_length=8,
@@ -47,9 +46,9 @@ class UserUpdate(BaseModel):
 
 class UserInDBBase(UserBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    plan: UserPlan = UserPlan.TRIAL
+    plan: UserPlan = UserPlan.BASIC
     subscription_status: SubscriptionStatus = SubscriptionStatus.TRIALING
-    subscription_end_date: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(days=30))
+    subscription_end_date: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(days=90))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

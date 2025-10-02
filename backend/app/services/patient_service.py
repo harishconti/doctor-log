@@ -1,6 +1,9 @@
 from app.db.session import PatientCollection, CounterCollection
 from app.schemas.patient import PatientCreate, PatientUpdate, NoteCreate
-from app.models.patient import Patient, PatientNote
+from app.schemas.clinical_note import ClinicalNoteCreate
+from app.models.patient import Patient
+from app.models.clinical_note import ClinicalNote
+from app.services import clinical_note_service
 from typing import List, Optional, Dict
 from bson import ObjectId
 import uuid
@@ -29,7 +32,6 @@ async def create_patient(patient_data: PatientCreate, user_id: str) -> Patient:
     patient_dict["user_id"] = user_id
     patient_dict["created_at"] = datetime.utcnow()
     patient_dict["updated_at"] = datetime.utcnow()
-    patient_dict["notes"] = []
 
     await PatientCollection.insert_one(patient_dict)
     return Patient(**patient_dict)
@@ -97,32 +99,46 @@ async def delete_patient(patient_id: str, user_id: str) -> bool:
     result = await PatientCollection.delete_one({"id": patient_id, "user_id": user_id})
     return result.deleted_count > 0
 
-async def add_note_to_patient(patient_id: str, note_data: NoteCreate, user_id: str) -> Optional[PatientNote]:
+async def add_note_to_patient(patient_id: str, note_data: NoteCreate, user_id: str) -> Optional[ClinicalNote]:
     """
-    Adds a new note to a patient's record.
+    Adds a new note to a patient's record by creating a new document in the
+    clinical_notes collection.
     """
-    note = PatientNote(**note_data.dict())
-
-    result = await PatientCollection.update_one(
-        {"id": patient_id, "user_id": user_id},
-        {"$push": {"notes": note.dict()}, "$set": {"updated_at": datetime.utcnow()}}
-    )
-
-    if result.matched_count == 0:
-        return None
-
-    return note
-
-async def get_patient_notes(patient_id: str, user_id: str) -> Optional[List[PatientNote]]:
-    """
-    Retrieves all notes for a specific patient.
-    """
+    # First, verify the patient exists and belongs to the user.
     patient = await get_patient_by_id(patient_id, user_id)
     if not patient:
         return None
 
-    # Sort notes by timestamp descending
-    sorted_notes = sorted(patient.notes, key=lambda n: n.timestamp, reverse=True)
+    # Create the clinical note using the dedicated service.
+    clinical_note_data = ClinicalNoteCreate(
+        patient_id=patient_id,
+        content=note_data.content,
+        visit_type=note_data.visit_type
+    )
+    note = await clinical_note_service.create_note(clinical_note_data, user_id)
+
+    # Update the patient's updated_at timestamp.
+    await PatientCollection.update_one(
+        {"id": patient_id, "user_id": user_id},
+        {"$set": {"updated_at": datetime.utcnow()}}
+    )
+
+    return note
+
+async def get_patient_notes(patient_id: str, user_id: str) -> Optional[List[ClinicalNote]]:
+    """
+    Retrieves all notes for a specific patient from the clinical_notes collection.
+    """
+    # First, verify the patient exists and belongs to the user.
+    patient = await get_patient_by_id(patient_id, user_id)
+    if not patient:
+        return None
+
+    # Retrieve notes using the dedicated service.
+    notes = await clinical_note_service.get_notes_for_patient(patient_id, user_id)
+
+    # Sort notes by creation date descending
+    sorted_notes = sorted(notes, key=lambda n: n.created_at, reverse=True)
     return sorted_notes
 
 async def get_patient_groups(user_id: str) -> List[str]:

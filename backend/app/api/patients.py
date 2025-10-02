@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional
 from app.core.security import get_current_user, require_pro_user
-from app.services import patient_service
+from app.services import patient_service, clinical_note_service
 from app.schemas.patient import (
-    PatientCreate, PatientUpdate, Patient, NoteCreate, PatientNote
+    PatientCreate, PatientUpdate, Patient
 )
+from app.schemas.clinical_note import NoteCreate, ClinicalNote
 
 router = APIRouter()
 

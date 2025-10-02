@@ -16,15 +16,11 @@ async def create_user(user_data: UserCreate) -> User:
         raise ValueError("Email already registered")
 
     user_dict = user_data.dict()
-    user_dict["id"] = str(uuid.uuid4())
     user_dict["password_hash"] = hash_password(user_dict.pop("password"))
-    # The 'plan' is now part of the user_data
-    user_dict["subscription_status"] = SubscriptionStatus.TRIALING if user_data.plan == UserPlan.TRIAL else SubscriptionStatus.ACTIVE
-    user_dict["subscription_end_date"] = datetime.utcnow() + timedelta(days=30)
-    user_dict["created_at"] = datetime.utcnow()
-    user_dict["updated_at"] = datetime.utcnow()
 
-    # Create a User model instance for the database
+    # Create a User model instance for the database.
+    # Pydantic will apply the default values for id, plan, subscription_status,
+    # subscription_end_date, created_at, and updated_at from the User model.
     db_user = User(**user_dict)
 
     # Insert the dictionary representation into the database

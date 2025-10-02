@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 import logging
 
-from app.api import auth, patients, webhooks
+from app.api import auth, patients, webhooks, documents, analytics, payments
 from app.core.config import settings
 from app.db.session import shutdown_db_client
 from app.db.init_db import init_dummy_data
@@ -32,6 +32,9 @@ app.add_middleware(
 # --- API Routers ---
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(patients.router, prefix="/api/patients", tags=["Patients"])
+app.include_router(documents.router, prefix="/api/documents", tags=["Documents"])
+app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
+app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
 
 # --- Event Handlers ---
