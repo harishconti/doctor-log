@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from app.schemas.user import UserCreate, UserLogin
+from app.core.limiter import limiter
 from app.schemas.token import Token, RefreshToken
 from app.services import user_service
 from app.core.security import create_access_token, create_refresh_token, get_current_user
@@ -10,7 +11,8 @@ from app.core.config import settings
 router = APIRouter()
 
 @router.post("/register", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def register_user(user_data: UserCreate):
+@limiter.limit("5/minute")
+async def register_user(request: Request, user_data: UserCreate):
     """
     Register a new user and return an access token, refresh token, and user info.
     """
@@ -39,7 +41,8 @@ async def register_user(user_data: UserCreate):
         )
 
 @router.post("/login", response_model=dict)
-async def login_for_access_token(user_data: UserLogin):
+@limiter.limit("5/minute")
+async def login_for_access_token(request: Request, user_data: UserLogin):
     """
     Authenticate a user and return tokens and user info.
     """
@@ -63,7 +66,8 @@ async def login_for_access_token(user_data: UserLogin):
     }
 
 @router.post("/refresh", response_model=Token)
-async def refresh_access_token(refresh_token_data: RefreshToken):
+@limiter.limit("20/minute")
+async def refresh_access_token(request: Request, refresh_token_data: RefreshToken):
     """
     Refresh an access token using a valid refresh token.
     """

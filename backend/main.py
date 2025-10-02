@@ -6,6 +6,10 @@ from app.api import auth, patients
 from app.core.config import settings
 from app.db.session import shutdown_db_client
 from app.db.init_db import init_dummy_data
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from starlette.requests import Request
+from app.core.limiter import limiter
 
 # --- App Initialization ---
 app = FastAPI(
@@ -13,6 +17,8 @@ app = FastAPI(
     version="3.0",
     description="Refactored API for managing medical contacts with advanced features."
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # --- Middleware ---
 app.add_middleware(
