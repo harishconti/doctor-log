@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_pro_user
 from app.services import patient_service
 from app.schemas.patient import (
     PatientCreate, PatientUpdate, Patient, NoteCreate, PatientNote
@@ -153,3 +153,12 @@ async def get_statistics(current_user_id: str = Depends(get_current_user)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while fetching statistics."
         )
+
+# --- Pro-Only Endpoint Example ---
+
+@router.get("/pro-feature/", response_model=dict)
+async def pro_feature_endpoint(current_user_id: str = Depends(require_pro_user)):
+    """
+    An example endpoint that is only accessible to PRO users.
+    """
+    return {"success": True, "message": f"Welcome, PRO user {current_user_id}! You have access to this exclusive feature."}

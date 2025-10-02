@@ -3,6 +3,7 @@ from typing import Optional
 from datetime import datetime, timedelta
 import uuid
 from bson import ObjectId
+from app.schemas.user import UserPlan, SubscriptionStatus
 
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -10,9 +11,9 @@ class User(BaseModel):
     phone: Optional[str] = ""
     full_name: str
     medical_specialty: Optional[str] = "general"
-    subscription_plan: str = "regular"  # regular, pro
-    subscription_status: str = "active"  # active, inactive, trial
-    trial_end_date: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(days=30))
+    plan: UserPlan = UserPlan.TRIAL
+    subscription_status: SubscriptionStatus = SubscriptionStatus.TRIALING
+    subscription_end_date: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(days=30))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     password_hash: Optional[str] = None

@@ -6,6 +6,7 @@ from typing import Optional
 import jwt
 
 from app.core.config import settings
+from app.schemas.user import UserPlan
 
 # --- CryptContext for Password Hashing ---
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -24,14 +25,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 # --- JWT Token Creation ---
-def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(subject: str, plan: str, expires_delta: Optional[timedelta] = None) -> str:
     """Creates a new access token."""
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    to_encode = {"exp": expire, "sub": str(subject)}
+    to_encode = {"exp": expire, "sub": str(subject), "plan": plan}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
@@ -80,4 +81,39 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(r
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred during authentication"
+        )
+
+# --- Dependency to Require "Pro" User ---
+async def require_pro_user(credentials: HTTPAuthorizationCredentials = Depends(reusable_oauth2)) -> str:
+    """
+    Dependency to ensure the current user has a "PRO" subscription plan.
+    Raises HTTPException if the user is not a pro user.
+    """
+    try:
+        payload = jwt.decode(
+            credentials.credentials, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        user_id: str = payload.get("sub")
+        user_plan: str = payload.get("plan")
+
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials: user ID not in token",
+            )
+
+        if user_plan != UserPlan.PRO:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This feature requires a PRO subscription.",
+            )
+
+        return user_id
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired"
+        )
+    except jwt.PyJWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials"
         )
