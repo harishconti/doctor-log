@@ -11,9 +11,9 @@ class User(BaseModel):
     phone: Optional[str] = ""
     full_name: str
     medical_specialty: Optional[str] = "general"
-    plan: UserPlan = UserPlan.TRIAL
+    plan: UserPlan = UserPlan.BASIC
     subscription_status: SubscriptionStatus = SubscriptionStatus.TRIALING
-    subscription_end_date: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(days=30))
+    subscription_end_date: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(days=90))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     password_hash: Optional[str] = None

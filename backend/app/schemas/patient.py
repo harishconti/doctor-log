@@ -3,22 +3,6 @@ from typing import List, Optional, Literal
 from datetime import datetime
 import uuid
 
-# --- Patient Note Schemas ---
-class PatientNoteBase(BaseModel):
-    content: str = Field(..., min_length=1, max_length=5000)
-    visit_type: Literal["regular", "follow-up", "emergency"] = "regular"
-
-class PatientNoteCreate(PatientNoteBase):
-    pass
-
-class PatientNote(PatientNoteBase):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    created_by: str = "practitioner"
-
-    class Config:
-        from_attributes = True
-
 # --- Patient Schemas ---
 class PatientBase(BaseModel):
     name: str = Field(..., min_length=2, max_length=100)
@@ -51,7 +35,6 @@ class PatientInDBBase(PatientBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     patient_id: str  # Auto-generated incremental ID like PAT001
     user_id: str  # Associate with logged-in user
-    notes: List[PatientNote] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

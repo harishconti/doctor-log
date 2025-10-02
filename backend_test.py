@@ -21,6 +21,7 @@ class MedicalContactsAPITester:
         self.demo_user_token = None
         self.test_user_id = None
         self.test_patient_id = None
+        self.pro_user_token = None
         self.results = {
             'passed': 0,
             'failed': 0,
@@ -87,6 +88,34 @@ class MedicalContactsAPITester:
         except Exception as e:
             self.log_result("User Registration", False, f"Exception: {str(e)}")
             return False
+
+    def register_pro_user(self):
+        """Register a dedicated pro user for testing pro features"""
+        try:
+            pro_user_data = {
+                "email": f"pro.user.{datetime.now().timestamp()}@clinic.com",
+                "password": "pro_password_123",
+                "full_name": "Dr. Pro",
+                "plan": "pro"
+            }
+            response = self.session.post(f"{API_BASE}/auth/register", json=pro_user_data)
+            success = response.status_code == 201
+
+            if success:
+                data = response.json()
+                if data.get('success') and data.get('access_token'):
+                    self.pro_user_token = data['access_token']
+                    self.log_result("Pro User Registration", True, "Dedicated pro user registered successfully.")
+                else:
+                    success = False
+                    self.log_result("Pro User Registration", False, "Missing success flag or access token for pro user", response)
+            else:
+                self.log_result("Pro User Registration", False, "Pro user registration failed", response)
+
+            return success
+        except Exception as e:
+            self.log_result("Pro User Registration", False, f"Exception: {str(e)}")
+            return False
     
     def test_demo_user_login(self):
         """Test login with demo user"""
@@ -143,6 +172,50 @@ class MedicalContactsAPITester:
         except Exception as e:
             self.log_result("Get Current User", False, f"Exception: {str(e)}")
             return False
+
+    def test_user_registration_details(self):
+        """Test user registration details (plan, status, trial end date)"""
+        if not self.auth_token:
+            self.log_result("User Registration Details", False, "No auth token available")
+            return False
+
+        try:
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response = self.session.get(f"{API_BASE}/auth/me", headers=headers)
+            success = response.status_code == 200
+
+            if success:
+                data = response.json().get('user', {})
+                plan = data.get('plan')
+                status = data.get('subscription_status')
+                end_date_str = data.get('subscription_end_date')
+
+                # 1. Check Plan
+                plan_ok = plan == 'basic'
+                self.log_result("User Registration Details - Plan", plan_ok, f"Expected 'basic', got '{plan}'")
+
+                # 2. Check Status
+                status_ok = status == 'trialing'
+                self.log_result("User Registration Details - Status", status_ok, f"Expected 'trialing', got '{status}'")
+
+                # 3. Check Trial End Date
+                date_ok = False
+                if end_date_str:
+                    end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
+                    time_diff_days = (end_date - datetime.utcnow().replace(tzinfo=end_date.tzinfo)).days
+                    date_ok = 89 <= time_diff_days <= 90 # Check if it's within the 90-day window
+                    self.log_result("User Registration Details - Trial End Date", date_ok, f"Expected ~90 days, got {time_diff_days} days")
+                else:
+                    self.log_result("User Registration Details - Trial End Date", False, "subscription_end_date not found")
+
+                success = plan_ok and status_ok and date_ok
+            else:
+                self.log_result("User Registration Details", False, "Failed to get user profile", response)
+
+            return success
+        except Exception as e:
+            self.log_result("User Registration Details", False, f"Exception: {str(e)}")
+            return False
     
     def test_unauthorized_access(self):
         """Test that endpoints require authentication"""
@@ -178,33 +251,142 @@ class MedicalContactsAPITester:
                           f"Trial user correctly blocked with status {response_trial.status_code}" if success_trial else f"Trial user should be blocked, but got {response_trial.status_code}",
                           response_trial)
 
-            # 2. Create and log in a PRO user
-            pro_user_data = {
-                "email": f"pro.doctor.{datetime.now().timestamp()}@clinic.com",
-                "password": "propassword123",
-                "full_name": "Dr. Pro User",
-                "plan": "pro"
-            }
+            # 2. Test that the pro user gets a 200 OK
+            if not self.pro_user_token:
+                self.log_result("Pro Feature Access (Pro User)", False, "No pro user token available for test")
+                return False
 
-            pro_user_reg_response = self.session.post(f"{API_BASE}/auth/register", json=pro_user_data)
-            if pro_user_reg_response.status_code != 201:
-                 self.log_result("Pro Feature Access (Pro User Registration)", False, "Failed to register pro user for test", pro_user_reg_response)
-                 return False
-
-            pro_user_token = pro_user_reg_response.json()['access_token']
-
-            # 3. Test that the pro user gets a 200 OK
-            headers_pro = {"Authorization": f"Bearer {pro_user_token}"}
+            headers_pro = {"Authorization": f"Bearer {self.pro_user_token}"}
             response_pro = self.session.get(f"{API_BASE}/patients/pro-feature/", headers=headers_pro)
             success_pro = response_pro.status_code == 200
             self.log_result("Pro Feature Access (Pro User)", success_pro,
-                          f"Pro user correctly allowed with status {response_pro.status_code}" if success_pro else f"Pro user should be allowed, but got {response_pro.status_code}",
+                          f"Pro user correctly allowed with status {response_pro.status_code}" if success_pro else f"Pro user should be blocked, but got {response_pro.status_code}",
                           response_pro)
 
             return success_trial and success_pro
 
         except Exception as e:
             self.log_result("Pro Feature Access", False, f"Exception: {str(e)}")
+            return False
+
+    def test_document_feature_access(self):
+        """Test access to the pro-only document endpoints"""
+        if not self.auth_token or not self.test_patient_id:
+            self.log_result("Document Feature Access", False, "No auth token or patient ID for test user available")
+            return False
+
+        try:
+            # 1. Test that the basic/trial user gets a 403 Forbidden
+            headers_trial = {"Authorization": f"Bearer {self.auth_token}"}
+            doc_data = {
+                "patient_id": self.test_patient_id,
+                "file_name": "trial_user_test_doc.pdf",
+                "storage_url": "https://fake-storage.com/trial_user_test_doc.pdf"
+            }
+            response_trial_post = self.session.post(f"{API_BASE}/documents/", headers=headers_trial, json=doc_data)
+            success_trial = response_trial_post.status_code == 403
+            self.log_result("Document Upload (Trial User)", success_trial,
+                          f"Trial user correctly blocked with status {response_trial_post.status_code}" if success_trial else f"Trial user should be blocked, but got {response_trial_post.status_code}",
+                          response_trial_post)
+
+            # 2. Test that the pro user can upload a document
+            if not self.pro_user_token:
+                self.log_result("Document Upload (Pro User)", False, "No pro user token available for test")
+                return False
+
+            headers_pro = {"Authorization": f"Bearer {self.pro_user_token}"}
+            pro_doc_data = {
+                "patient_id": self.test_patient_id, # Using the same patient for simplicity
+                "file_name": "pro_user_test_doc.pdf",
+                "storage_url": "https://fake-storage.com/pro_user_test_doc.pdf"
+            }
+            response_pro_post = self.session.post(f"{API_BASE}/documents/", headers=headers_pro, json=pro_doc_data)
+            success_pro_post = response_pro_post.status_code == 201
+            self.log_result("Document Upload (Pro User)", success_pro_post,
+                          f"Pro user correctly allowed to upload with status {response_pro_post.status_code}" if success_pro_post else f"Pro user upload failed with status {response_pro_post.status_code}",
+                          response_pro_post)
+
+            # 4. Test that the pro user can retrieve the document
+            response_pro_get = self.session.get(f"{API_BASE}/documents/{self.test_patient_id}", headers=headers_pro)
+            success_pro_get = response_pro_get.status_code == 200 and len(response_pro_get.json()) == 1
+            self.log_result("Get Documents (Pro User)", success_pro_get,
+                          f"Pro user correctly retrieved documents with status {response_pro_get.status_code}" if success_pro_get else f"Pro user get documents failed with status {response_pro_get.status_code}",
+                          response_pro_get)
+
+
+            return success_trial and success_pro_post and success_pro_get
+
+        except Exception as e:
+            self.log_result("Document Feature Access", False, f"Exception: {str(e)}")
+            return False
+
+    def test_analytics_feature_access(self):
+        """Test access to the pro-only analytics endpoint"""
+        if not self.auth_token:
+            self.log_result("Analytics Feature Access", False, "No auth token for test user available")
+            return False
+
+        try:
+            # 1. Test that the basic/trial user gets a 403 Forbidden
+            headers_trial = {"Authorization": f"Bearer {self.auth_token}"}
+            response_trial = self.session.get(f"{API_BASE}/analytics/patient-growth", headers=headers_trial)
+            success_trial = response_trial.status_code == 403
+            self.log_result("Analytics Access (Trial User)", success_trial,
+                          f"Trial user correctly blocked with status {response_trial.status_code}" if success_trial else f"Trial user should be blocked, but got {response_trial.status_code}",
+                          response_trial)
+
+            # 2. Test that the pro user can retrieve analytics data
+            if not self.pro_user_token:
+                self.log_result("Analytics Access (Pro User)", False, "No pro user token available for test")
+                return False
+
+            headers_pro = {"Authorization": f"Bearer {self.pro_user_token}"}
+            response_pro = self.session.get(f"{API_BASE}/analytics/patient-growth", headers=headers_pro)
+            success_pro = response_pro.status_code == 200
+            self.log_result("Analytics Access (Pro User)", success_pro,
+                          f"Pro user correctly allowed to access analytics with status {response_pro.status_code}" if success_pro else f"Pro user analytics access failed with status {response_pro.status_code}",
+                          response_pro)
+
+            return success_trial and success_pro
+
+        except Exception as e:
+            self.log_result("Analytics Feature Access", False, f"Exception: {str(e)}")
+            return False
+
+    def test_payment_flow(self):
+        """Test the simulated payment flow"""
+        if not self.auth_token:
+            self.log_result("Payment Flow", False, "No auth token for test user available")
+            return False
+
+        try:
+            # 1. Test that a basic user can create a checkout session
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response_checkout = self.session.post(f"{API_BASE}/payments/create-checkout-session", headers=headers)
+            success_checkout = response_checkout.status_code == 200 and "checkout_url" in response_checkout.json()
+            self.log_result("Create Checkout Session", success_checkout,
+                          f"Checkout session created successfully with URL: {response_checkout.json().get('checkout_url')}" if success_checkout else "Failed to create checkout session",
+                          response_checkout)
+
+            # 2. Test that the webhook can be called (simulated)
+            webhook_payload = {
+                "type": "checkout.session.completed",
+                "data": {
+                    "object": {
+                        "client_reference_id": self.test_user_id
+                    }
+                }
+            }
+            response_webhook = self.session.post(f"{API_BASE}/payments/webhooks/stripe", json=webhook_payload)
+            success_webhook = response_webhook.status_code == 200
+            self.log_result("Stripe Webhook", success_webhook,
+                          "Webhook endpoint responded successfully" if success_webhook else "Webhook endpoint failed",
+                          response_webhook)
+
+            return success_checkout and success_webhook
+
+        except Exception as e:
+            self.log_result("Payment Flow", False, f"Exception: {str(e)}")
             return False
     
     def save_results_to_file(self, filename="test_result.md"):
@@ -613,12 +795,17 @@ class MedicalContactsAPITester:
         tests = [
             ("Health Check", self.test_health_check),
             ("User Registration", self.test_user_registration),
+            ("Register Pro User", self.register_pro_user),
+            ("User Registration Details", self.test_user_registration_details),
             ("Demo User Login", self.test_demo_user_login),
             ("Get Current User", self.test_get_current_user),
             ("Unauthorized Access Protection", self.test_unauthorized_access),
             ("Pro Feature Access", self.test_pro_feature_access),
             ("Demo Patients Loaded", self.test_demo_patients_loaded),
             ("Create Patient", self.test_create_patient),
+            ("Document Feature Access", self.test_document_feature_access),
+            ("Analytics Feature Access", self.test_analytics_feature_access),
+            ("Payment Flow", self.test_payment_flow),
             ("Get Patients", self.test_get_patients),
             ("Search Patients", self.test_search_patients),
             ("Update Patient", self.test_update_patient),
