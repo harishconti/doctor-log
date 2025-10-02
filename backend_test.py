@@ -152,15 +152,59 @@ class MedicalContactsAPITester:
             success = response.status_code == 403 or response.status_code == 401
             
             if success:
-                self.log_result("Unauthorized Access Protection", True, 
+                self.log_result("Unauthorized Access Protection", True,
                               f"Correctly blocked unauthorized access with status {response.status_code}")
             else:
-                self.log_result("Unauthorized Access Protection", False, 
+                self.log_result("Unauthorized Access Protection", False,
                               f"Should have blocked access but got status {response.status_code}", response)
             
             return success
         except Exception as e:
             self.log_result("Unauthorized Access Protection", False, f"Exception: {str(e)}")
+            return False
+
+    def test_pro_feature_access(self):
+        """Test access to the pro-only endpoint"""
+        if not self.auth_token:
+            self.log_result("Pro Feature Access", False, "No auth token for trial user available")
+            return False
+
+        try:
+            # 1. Test that the trial user (the default registered user) gets a 403 Forbidden
+            headers_trial = {"Authorization": f"Bearer {self.auth_token}"}
+            response_trial = self.session.get(f"{API_BASE}/patients/pro-feature/", headers=headers_trial)
+            success_trial = response_trial.status_code == 403
+            self.log_result("Pro Feature Access (Trial User)", success_trial,
+                          f"Trial user correctly blocked with status {response_trial.status_code}" if success_trial else f"Trial user should be blocked, but got {response_trial.status_code}",
+                          response_trial)
+
+            # 2. Create and log in a PRO user
+            pro_user_data = {
+                "email": f"pro.doctor.{datetime.now().timestamp()}@clinic.com",
+                "password": "propassword123",
+                "full_name": "Dr. Pro User",
+                "plan": "pro"
+            }
+
+            pro_user_reg_response = self.session.post(f"{API_BASE}/auth/register", json=pro_user_data)
+            if pro_user_reg_response.status_code != 201:
+                 self.log_result("Pro Feature Access (Pro User Registration)", False, "Failed to register pro user for test", pro_user_reg_response)
+                 return False
+
+            pro_user_token = pro_user_reg_response.json()['access_token']
+
+            # 3. Test that the pro user gets a 200 OK
+            headers_pro = {"Authorization": f"Bearer {pro_user_token}"}
+            response_pro = self.session.get(f"{API_BASE}/patients/pro-feature/", headers=headers_pro)
+            success_pro = response_pro.status_code == 200
+            self.log_result("Pro Feature Access (Pro User)", success_pro,
+                          f"Pro user correctly allowed with status {response_pro.status_code}" if success_pro else f"Pro user should be allowed, but got {response_pro.status_code}",
+                          response_pro)
+
+            return success_trial and success_pro
+
+        except Exception as e:
+            self.log_result("Pro Feature Access", False, f"Exception: {str(e)}")
             return False
     
     def save_results_to_file(self, filename="test_result.md"):
@@ -572,6 +616,7 @@ class MedicalContactsAPITester:
             ("Demo User Login", self.test_demo_user_login),
             ("Get Current User", self.test_get_current_user),
             ("Unauthorized Access Protection", self.test_unauthorized_access),
+            ("Pro Feature Access", self.test_pro_feature_access),
             ("Demo Patients Loaded", self.test_demo_patients_loaded),
             ("Create Patient", self.test_create_patient),
             ("Get Patients", self.test_get_patients),

@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timedelta
 from app.core.security import hash_password
 from app.db.session import UserCollection, PatientCollection, CounterCollection
+from app.schemas.user import UserPlan, SubscriptionStatus
 import uuid
 
 # Configure logger for this module
@@ -18,15 +19,15 @@ async def init_dummy_data():
             {
                 "id": "demo_user_1", "email": "dr.sarah@clinic.com", "phone": "+1234567890",
                 "full_name": "Dr. Sarah Johnson", "medical_specialty": "cardiology",
-                "password_hash": hash_password("password123"), "subscription_plan": "pro",
-                "subscription_status": "active", "trial_end_date": datetime.utcnow() + timedelta(days=365),
+                "password_hash": hash_password("password123"), "plan": UserPlan.PRO,
+                "subscription_status": SubscriptionStatus.ACTIVE, "subscription_end_date": datetime.utcnow() + timedelta(days=365),
                 "created_at": datetime.utcnow(), "updated_at": datetime.utcnow()
             },
             {
                 "id": "demo_user_2", "email": "dr.mike@physio.com", "phone": "+1987654321",
                 "full_name": "Dr. Mike Chen", "medical_specialty": "physiotherapy",
-                "password_hash": hash_password("password123"), "subscription_plan": "regular",
-                "subscription_status": "active", "trial_end_date": datetime.utcnow() + timedelta(days=30),
+                "password_hash": hash_password("password123"), "plan": UserPlan.BASIC,
+                "subscription_status": SubscriptionStatus.ACTIVE, "subscription_end_date": datetime.utcnow() + timedelta(days=30),
                 "created_at": datetime.utcnow(), "updated_at": datetime.utcnow()
             }
         ]

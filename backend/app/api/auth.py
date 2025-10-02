@@ -19,7 +19,7 @@ async def register_user(request: Request, user_data: UserCreate):
     try:
         user = await user_service.create_user(user_data)
 
-        access_token = create_access_token(subject=user.id)
+        access_token = create_access_token(subject=user.id, plan=user.plan)
         refresh_token = create_refresh_token(subject=user.id)
 
         return {
@@ -54,7 +54,7 @@ async def login_for_access_token(request: Request, user_data: UserLogin):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = create_access_token(subject=user.id)
+    access_token = create_access_token(subject=user.id, plan=user.plan)
     refresh_token = create_refresh_token(subject=user.id)
 
     return {
@@ -82,7 +82,11 @@ async def refresh_access_token(request: Request, refresh_token_data: RefreshToke
                 detail="Invalid refresh token",
             )
 
-        access_token = create_access_token(subject=user_id)
+        user = await user_service.get_user_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        access_token = create_access_token(subject=user.id, plan=user.plan)
 
         return {
             "access_token": access_token,

@@ -3,6 +3,18 @@ from typing import Optional
 from datetime import datetime, timedelta
 import uuid
 import re
+from enum import Enum
+
+class UserPlan(str, Enum):
+    TRIAL = "trial"
+    BASIC = "basic"
+    PRO = "pro"
+
+class SubscriptionStatus(str, Enum):
+    TRIALING = "trialing"
+    ACTIVE = "active"
+    CANCELED = "canceled"
+    PAST_DUE = "past_due"
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -11,6 +23,7 @@ class UserBase(BaseModel):
     medical_specialty: Optional[str] = Field(default="general", max_length=100)
 
 class UserCreate(UserBase):
+    plan: UserPlan = UserPlan.TRIAL
     password: str = Field(
         ...,
         min_length=8,
@@ -34,9 +47,9 @@ class UserUpdate(BaseModel):
 
 class UserInDBBase(UserBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    subscription_plan: str = "regular"
-    subscription_status: str = "active"
-    trial_end_date: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(days=30))
+    plan: UserPlan = UserPlan.TRIAL
+    subscription_status: SubscriptionStatus = SubscriptionStatus.TRIALING
+    subscription_end_date: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(days=30))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
