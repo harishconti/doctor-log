@@ -4,14 +4,14 @@ This document outlines the remaining tasks and features required for the beta re
 
 ## Core Functionality
 
-- [ ] **Subscription State Management:**
-  - [ ] Enhance the global state (Zustand) to store and manage the user's subscription plan, status, and trial end date.
-  - [ ] Ensure the login process correctly populates this state from the backend response.
+- [x] **Subscription State Management:**
+  - [x] Enhance the global state (Zustand) to store and manage the user's subscription plan, status, and trial end date.
+  - [x] Ensure the login process correctly populates this state from the backend response.
 
-- [ ] **Conditional UI Rendering:**
-  - [ ] Display the user's current subscription plan and trial status on the profile screen.
-  - [ ] Implement UI elements that are visible only to 'Pro' users (e.g., "Upgrade to Pro" buttons).
-  - [ ] Lock Pro-level features, such as document uploading, for non-Pro users.
+- [x] **Conditional UI Rendering:**
+  - [x] Display the user's current subscription plan and trial status on the profile screen.
+  - [x] Implement UI elements that are visible only to 'Pro' users (e.g., "Upgrade to Pro" buttons).
+  - [x] Lock Pro-level features, such as document uploading, for non-Pro users.
 
 - [ ] **Payment Integration:**
   - [ ] Create a dedicated "Upgrade" screen detailing the benefits of the Pro plan.

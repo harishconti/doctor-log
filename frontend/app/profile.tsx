@@ -366,7 +366,7 @@ export default function ProfileScreen() {
             <View style={styles.subscriptionCard}>
               <View style={styles.subscriptionHeader}>
                 <Text style={styles.planName}>
-                  {subscriptionInfo.subscription_plan.charAt(0).toUpperCase() + 
+                  {subscriptionInfo.subscription_plan.charAt(0).toUpperCase() +
                    subscriptionInfo.subscription_plan.slice(1)} Plan
                 </Text>
                 <View style={[
@@ -374,7 +374,7 @@ export default function ProfileScreen() {
                   { backgroundColor: getStatusColor(subscriptionInfo.subscription_status) }
                 ]}>
                   <Text style={styles.statusText}>
-                    {subscriptionInfo.subscription_status.charAt(0).toUpperCase() + 
+                    {subscriptionInfo.subscription_status.charAt(0).toUpperCase() +
                      subscriptionInfo.subscription_status.slice(1)}
                   </Text>
                 </View>
