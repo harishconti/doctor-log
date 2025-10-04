@@ -18,12 +18,6 @@ import axios from 'axios';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
-interface SubscriptionInfo {
-  subscription_plan: string;
-  subscription_status: string;
-  trial_end_date: string;
-}
-
 interface Stats {
   total_patients: number;
   favorite_patients: number;
@@ -33,7 +27,6 @@ interface Stats {
 export default function ProfileScreen() {
   const { user, logout, refreshUser } = useAuth();
   const router = useRouter();
-  const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpgrading, setIsUpgrading] = useState(false);
@@ -47,49 +40,20 @@ export default function ProfileScreen() {
 
   const loadProfileData = async () => {
     try {
-      // Use Promise.allSettled for better error handling
-      const [subscriptionResult, statsResult] = await Promise.allSettled([
-        axios.get(`${BACKEND_URL}/api/subscription`),
-        axios.get(`${BACKEND_URL}/api/stats`)
-      ]);
-
-      // Handle subscription data
-      if (subscriptionResult.status === 'fulfilled') {
-        setSubscriptionInfo(subscriptionResult.value.data.subscription);
-      } else {
-        console.error('Error loading subscription data:', subscriptionResult.reason);
-        // Set default subscription info or show error state
-        setSubscriptionInfo({
-          subscription_plan: 'regular',
-          subscription_status: 'unknown',
-          trial_end_date: new Date().toISOString()
-        });
-      }
-
-      // Handle stats data
-      if (statsResult.status === 'fulfilled') {
-        setStats(statsResult.value.data.stats);
-      } else {
-        console.error('Error loading stats data:', statsResult.reason);
-        // Set default stats or show error state
-        setStats({
-          total_patients: 0,
-          favorite_patients: 0,
-          groups: []
-        });
-      }
-
-      // Show error message if both failed
-      if (subscriptionResult.status === 'rejected' && statsResult.status === 'rejected') {
-        Alert.alert(
-          'Connection Error',
-          'Unable to load profile data. Please check your internet connection and try again.',
-          [{ text: 'OK' }]
-        );
-      }
+      const statsResult = await axios.get(`${BACKEND_URL}/api/stats`);
+      setStats(statsResult.data.stats);
     } catch (error) {
-      console.error('Unexpected error loading profile data:', error);
-      Alert.alert('Error', 'An unexpected error occurred while loading profile data.');
+      console.error('Error loading stats data:', error);
+      setStats({
+        total_patients: 0,
+        favorite_patients: 0,
+        groups: []
+      });
+      Alert.alert(
+        'Connection Error',
+        'Unable to load profile data. Please check your internet connection and try again.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setIsLoading(false);
     }
@@ -108,7 +72,6 @@ export default function ProfileScreen() {
             try {
               await axios.post(`${BACKEND_URL}/api/subscription/upgrade`);
               await refreshUser();
-              await loadProfileData();
               Alert.alert('Success', 'Successfully upgraded to Pro plan!');
             } catch (error) {
               Alert.alert('Error', 'Failed to upgrade subscription');
@@ -272,10 +235,19 @@ export default function ProfileScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return '#2ecc71';
-      case 'trial': return '#f39c12';
+      case 'trialing': return '#f39c12';
       case 'inactive': return '#e74c3c';
       default: return '#95a5a6';
     }
+  };
+
+  const getDaysRemaining = (dateString: string | null) => {
+    if (!dateString) return null;
+    const trialEndDate = new Date(dateString);
+    const now = new Date();
+    const diffTime = trialEndDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
   };
 
   if (isLoading) {
@@ -360,29 +332,29 @@ export default function ProfileScreen() {
         )}
 
         {/* Subscription Info */}
-        {subscriptionInfo && (
+        {user && (
           <View style={styles.subscriptionSection}>
             <Text style={styles.sectionTitle}>Subscription</Text>
             <View style={styles.subscriptionCard}>
               <View style={styles.subscriptionHeader}>
                 <Text style={styles.planName}>
-                  {subscriptionInfo.subscription_plan.charAt(0).toUpperCase() + 
-                   subscriptionInfo.subscription_plan.slice(1)} Plan
+                  {user.subscription_plan.charAt(0).toUpperCase() +
+                   user.subscription_plan.slice(1)} Plan
                 </Text>
                 <View style={[
                   styles.statusBadge, 
-                  { backgroundColor: getStatusColor(subscriptionInfo.subscription_status) }
+                  { backgroundColor: getStatusColor(user.subscription_status) }
                 ]}>
                   <Text style={styles.statusText}>
-                    {subscriptionInfo.subscription_status.charAt(0).toUpperCase() + 
-                     subscriptionInfo.subscription_status.slice(1)}
+                    {user.subscription_status.charAt(0).toUpperCase() +
+                     user.subscription_status.slice(1)}
                   </Text>
                 </View>
               </View>
               
-              {subscriptionInfo.subscription_status === 'trial' && (
+              {user.subscription_status === 'trialing' && (
                 <Text style={styles.trialInfo}>
-                  Trial ends: {formatDate(subscriptionInfo.trial_end_date)}
+                  {getDaysRemaining(user.trial_end_date)} days left in your trial.
                 </Text>
               )}
 
@@ -401,7 +373,7 @@ export default function ProfileScreen() {
                   <Text style={styles.featureText}>Medical Notes</Text>
                 </View>
                 
-                {subscriptionInfo.subscription_plan === 'regular' && (
+                {user.subscription_plan === 'regular' && (
                   <>
                     <View style={styles.feature}>
                       <Ionicons name="close" size={16} color="#e74c3c" />
@@ -414,7 +386,7 @@ export default function ProfileScreen() {
                   </>
                 )}
                 
-                {subscriptionInfo.subscription_plan === 'pro' && (
+                {user.subscription_plan === 'pro' && (
                   <>
                     <View style={styles.feature}>
                       <Ionicons name="checkmark" size={16} color="#2ecc71" />
@@ -432,7 +404,7 @@ export default function ProfileScreen() {
                 )}
               </View>
 
-              {subscriptionInfo.subscription_plan === 'regular' && (
+              {user.subscription_plan === 'regular' && (
                 <TouchableOpacity 
                   style={[styles.upgradeButton, isUpgrading && styles.upgradeButtonDisabled]}
                   onPress={handleUpgrade}

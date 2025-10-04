@@ -84,14 +84,14 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const user = useAppStore((state) => state.user);
   const setUser = useAppStore((state) => state.setUser);
+  const _hasHydrated = useAppStore((state) => state._hasHydrated);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const isAuthenticated = !!user && !!token;
 
-  // Load stored auth data on app start
   useEffect(() => {
-    const loadStoredAuth = async () => {
+    const loadToken = async () => {
       try {
         const storedToken = await SecureStorageAdapter.getItem('auth_token');
         if (storedToken) {
@@ -100,13 +100,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       } catch (e) {
         console.error("Failed to load auth token from storage", e);
-      } finally {
-        setIsLoading(false);
       }
     };
-
-    loadStoredAuth();
+    loadToken();
   }, []);
+
+  useEffect(() => {
+    if (_hasHydrated) {
+      setIsLoading(false);
+    }
+  }, [_hasHydrated]);
 
   const login = async (email: string, password: string) => {
     try {
