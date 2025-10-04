@@ -5,6 +5,19 @@ import axios from 'axios';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
+export interface User {
+  id: string;
+  email: string;
+  phone: string;
+  full_name: string;
+  medical_specialty: string;
+  subscription_plan: 'regular' | 'pro';
+  subscription_status: 'active' | 'inactive' | 'trial';
+  trial_end_date: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Patient {
   id: string;
   patient_id: string;
@@ -67,6 +80,9 @@ interface ErrorState {
 }
 
 interface AppState {
+  // User data
+  user: User | null;
+
   // Patients data
   patients: Patient[];
   searchQuery: string;
@@ -87,6 +103,7 @@ interface AppState {
   offlineQueue: any[];
   
   // Actions
+  setUser: (user: User | null) => void;
   setPatients: (patients: Patient[]) => void;
   addPatient: (patient: Patient) => void;
   updatePatient: (id: string, updates: Partial<Patient>) => void;
@@ -155,6 +172,7 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       // Initial state
+      user: null,
       patients: [],
       searchQuery: '',
       selectedFilter: 'all',
@@ -164,6 +182,9 @@ export const useAppStore = create<AppState>()(
       lastSyncTime: null,
       settings: defaultSettings,
       offlineQueue: [],
+
+      // User actions
+      setUser: (user) => set({ user }),
 
       // Patient actions
       setPatients: (patients) => set({ patients }),
@@ -368,6 +389,7 @@ export const useAppStore = create<AppState>()(
       name: 'medical-contacts-store',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
+        user: state.user,
         patients: state.patients,
         settings: state.settings,
         offlineQueue: state.offlineQueue,
