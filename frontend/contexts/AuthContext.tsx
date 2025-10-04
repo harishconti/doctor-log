@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import axios from 'axios';
+import { useAppStore, User } from '../store/useAppStore';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -47,19 +48,6 @@ const SecureStorageAdapter = {
 };
 
 // Types
-interface User {
-  id: string;
-  email: string;
-  phone: string;
-  full_name: string;
-  medical_specialty: string;
-  subscription_plan: 'regular' | 'pro';
-  subscription_status: 'active' | 'inactive' | 'trial';
-  trial_end_date: string;
-  created_at: string;
-  updated_at: string;
-}
-
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -94,7 +82,8 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const user = useAppStore((state) => state.user);
+  const setUser = useAppStore((state) => state.setUser);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -102,13 +91,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Load stored auth data on app start
   useEffect(() => {
+    const loadStoredAuth = async () => {
+      try {
+        const storedToken = await SecureStorageAdapter.getItem('auth_token');
+        if (storedToken) {
+          setToken(storedToken);
+          axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        }
+      } catch (e) {
+        console.error("Failed to load auth token from storage", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     loadStoredAuth();
   }, []);
-
-  const loadStoredAuth = async () => {
-    // Simplified for debugging - bypass token check
-    setIsLoading(false);
-  };
 
   const login = async (email: string, password: string) => {
     try {
@@ -120,10 +118,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { access_token, user: userData } = response.data;
       
       // Store auth data
-      await Promise.all([
-        SecureStorageAdapter.setItem('auth_token', access_token),
-        AsyncStorage.setItem('user_data', JSON.stringify(userData))
-      ]);
+      await SecureStorageAdapter.setItem('auth_token', access_token);
       
       setToken(access_token);
       setUser(userData);
@@ -143,10 +138,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { access_token, user: newUser } = response.data;
       
       // Store auth data
-      await Promise.all([
-        SecureStorageAdapter.setItem('auth_token', access_token),
-        AsyncStorage.setItem('user_data', JSON.stringify(newUser))
-      ]);
+      await SecureStorageAdapter.setItem('auth_token', access_token);
       
       setToken(access_token);
       setUser(newUser);
@@ -164,7 +156,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // First, clear stored data - this is the critical part
       const storageCleanupResults = await Promise.allSettled([
         SecureStorageAdapter.removeItem('auth_token'),
-        AsyncStorage.removeItem('user_data'),
         AsyncStorage.removeItem('patients_cache'),
         AsyncStorage.removeItem('medical_call_logs'),
         AsyncStorage.removeItem('contacts_sync_enabled'),
@@ -173,7 +164,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Log any storage cleanup failures for debugging
       storageCleanupResults.forEach((result, index) => {
         if (result.status === 'rejected') {
-          const keys = ['auth_token', 'user_data', 'patients_cache', 'medical_call_logs', 'contacts_sync_enabled'];
+          const keys = ['auth_token', 'patients_cache', 'medical_call_logs', 'contacts_sync_enabled'];
           console.warn(`Failed to clear ${keys[index]}:`, result.reason);
         }
       });
@@ -209,7 +200,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await axios.get(`${BACKEND_URL}/api/auth/me`);
       const userData = response.data.user;
       
-      await AsyncStorage.setItem('user_data', JSON.stringify(userData));
       setUser(userData);
       
     } catch (error) {
