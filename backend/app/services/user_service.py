@@ -46,3 +46,20 @@ async def get_user_by_id(user_id: str) -> User | None:
     if user_from_db:
         return User(**user_from_db)
     return None
+
+async def update_user(user_id: str, updates: dict) -> Optional[User]:
+    """
+    Updates a user's data in the database.
+    """
+    # Ensure 'updated_at' is always updated on every change.
+    updates["updated_at"] = datetime.utcnow()
+
+    result = await UserCollection.find_one_and_update(
+        {"id": user_id},
+        {"$set": updates},
+        return_document=True
+    )
+
+    if result:
+        return User(**result)
+    return None

@@ -36,7 +36,6 @@ export default function ProfileScreen() {
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUpgrading, setIsUpgrading] = useState(false);
   const [userPhoto, setUserPhoto] = useState<string>('');
   const [updatingPhoto, setUpdatingPhoto] = useState(false);
 
@@ -95,31 +94,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleUpgrade = async () => {
-    Alert.alert(
-      'Upgrade to Pro',
-      'Upgrade to Pro plan for $9.99/month to access web dashboard and advanced features?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Upgrade',
-          onPress: async () => {
-            setIsUpgrading(true);
-            try {
-              await axios.post(`${BACKEND_URL}/api/subscription/upgrade`);
-              await refreshUser();
-              await loadProfileData();
-              Alert.alert('Success', 'Successfully upgraded to Pro plan!');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to upgrade subscription');
-            } finally {
-              setIsUpgrading(false);
-            }
-          }
-        }
-      ]
-    );
-  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -434,18 +408,11 @@ export default function ProfileScreen() {
 
               {subscriptionInfo.subscription_plan === 'regular' && (
                 <TouchableOpacity 
-                  style={[styles.upgradeButton, isUpgrading && styles.upgradeButtonDisabled]}
-                  onPress={handleUpgrade}
-                  disabled={isUpgrading}
+                  style={styles.upgradeButton}
+                  onPress={() => router.push('/upgrade')}
                 >
-                  {isUpgrading ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <>
-                      <Ionicons name="rocket" size={20} color="#fff" />
-                      <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
-                    </>
-                  )}
+                  <Ionicons name="rocket" size={20} color="#fff" />
+                  <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -676,9 +643,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
-  },
-  upgradeButtonDisabled: {
-    backgroundColor: '#95a5a6',
   },
   upgradeButtonText: {
     color: '#fff',
