@@ -46,9 +46,13 @@ async def stripe_webhook(request: Request):
     if event_type == "checkout.session.completed":
         user_id = payload.get("data", {}).get("object", {}).get("client_reference_id")
         if user_id:
-            # In a real app, you would update the user's plan to 'pro' and set the status to 'active'.
-            logging.info(f"Simulating subscription upgrade for user: {user_id}")
-            # For now, we'll just log the event. A full implementation would update the database.
-            pass
+            updated_user = await user_service.update_user(
+                user_id,
+                {"plan": "pro", "status": "active"}
+            )
+            if not updated_user:
+                logging.error(f"Failed to upgrade subscription for user: {user_id}")
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+            logging.info(f"Successfully upgraded subscription for user: {user_id}")
 
     return {"status": "received"}

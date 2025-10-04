@@ -47,7 +47,7 @@ interface Patient {
 
 export default function PatientDetailsScreen() {
   const { id } = useLocalSearchParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const router = useRouter();
   
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -315,6 +315,36 @@ export default function PatientDetailsScreen() {
             <Text style={styles.medicalValue}>{patient.initial_diagnosis || 'Not specified'}</Text>
           </View>
         </View>
+
+        {/* Documents Section (Pro Feature) */}
+        {user?.subscription_plan === 'pro' ? (
+          <View style={styles.notesCard}>
+            <Text style={styles.sectionTitle}>Documents</Text>
+            <TouchableOpacity
+              style={styles.uploadButton}
+              onPress={() => Alert.alert('Upload Document', 'This feature is coming soon!')}
+            >
+              <Ionicons name="cloud-upload" size={20} color="#fff" />
+              <Text style={styles.buttonText}>Upload Document</Text>
+            </TouchableOpacity>
+            <View style={styles.emptyNotes}>
+              <Ionicons name="document-attach-outline" size={48} color="#ccc" />
+              <Text style={styles.emptyNotesText}>No documents yet</Text>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.upgradeCard}
+            onPress={() => router.push('/upgrade')}
+          >
+            <Ionicons name="rocket-outline" size={32} color="#f39c12" />
+            <View style={styles.upgradeTextContainer}>
+              <Text style={styles.upgradeTitle}>Unlock Document Storage</Text>
+              <Text style={styles.upgradeSubtitle}>Upgrade to Pro to upload and manage patient documents.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#c7c7cc" />
+          </TouchableOpacity>
+        )}
 
         {/* Notes Section */}
         <View style={styles.notesCard}>
@@ -666,10 +696,48 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
   },
+  uploadButton: {
+    backgroundColor: '#27ae60',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+    marginBottom: 16,
+  },
   buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  upgradeCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  upgradeTextContainer: {
+    flex: 1,
+  },
+  upgradeTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  upgradeSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
   },
   modalContainer: {
     flex: 1,
