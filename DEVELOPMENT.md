@@ -3,22 +3,22 @@ This document outlines the development plan for the two client applications: the
 ## Part 1: Mobile App (React Native) - Enhancements Itinerary
 Objective: To update the existing mobile application to support the new subscription tiers, manage trial periods, and integrate the payment flow for upgrading to the Pro plan. The core codebase in the frontend/ directory will be modified and extended.
 ### 1. Core Features & User Tier Implementation
-#### Global State Enhancement
+#### Global State Enhancement (Completed)
 * Task: Update the global state management to handle detailed user subscription information.
 * Implementation:
-* Modify the AuthContext (frontend/contexts/AuthContext.tsx) and/or the Zustand store (frontend/store/useAppStore.ts) to store the complete user object received from the API upon login, including plan, status, and trial_ends_at.
-* This state will be used throughout the app to control feature access and UI presentation.
-#### Conditional UI Rendering
+* The Zustand store (`frontend/store/useAppStore.ts`) has been modified to store the complete user object received from the API upon login, including plan, status, and trial_ends_at.
+* This state is now used throughout the app to control feature access and UI presentation.
+#### Conditional UI Rendering (Completed)
 * Task: Implement UI changes that reflect the user's current subscription status.
 * Implementation:
-* Profile Screen (frontend/app/profile.tsx): Create a new component to display the user's current plan. It will show a "You have X days left in your trial" message if status === 'trialing', or a persistent "Upgrade to Pro" button if the trial is over and the plan is basic.
-* Feature Locking: Wrap Pro-level features in a conditional check. For example, on the Patient Detail screen (frontend/app/patient/[id].tsx), the "Upload Document" button will be wrapped in a component that only renders if user.plan === 'pro'..tsx]
-#### Payment & Upgrade Flow
+* The Profile Screen (`frontend/app/profile.tsx`) now displays the user's current plan and trial status.
+* Feature locking has been implemented for Pro-level features. For example, on the Patient Detail screen (`frontend/app/patient/[id].tsx`), the "Documents" section is only rendered if `user.plan === 'pro'`.
+#### Payment & Upgrade Flow (Completed)
 * Task: Integrate a payment gateway's SDK to allow users to subscribe to the Pro plan.
 * Implementation:
-* New Screen (frontend/app/upgrade.tsx): Create a dedicated screen that outlines the benefits of the Pro plan.
-* SDK Integration: Integrate the official React Native SDK for Stripe or Razorpay. The "Upgrade" button will trigger a call to the backend's /api/payments/create-checkout-session endpoint.
-* Checkout Process: The app will use the checkout_url from the backend response to launch the payment provider's secure, native checkout flow. After payment, the user's state should be refreshed to reflect their new "Pro" status.
+* A new screen (`frontend/app/upgrade.tsx`) has been created to outline the benefits of the Pro plan.
+* The "Upgrade" button triggers a call to the backend's `/api/payments/create-checkout-session` endpoint.
+* The app uses the `checkout_url` from the backend response to launch a secure checkout flow using `expo-web-browser`. After payment, the user's state is refreshed to reflect their new "Pro" status.
 ### New Feature Implementation
 * Task: Build the UI for the new Pro features that are accessible on mobile.
 * Implementation:

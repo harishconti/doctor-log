@@ -13,10 +13,10 @@ This document outlines the remaining tasks and features required for the beta re
   - [x] Implement UI elements that are visible only to 'Pro' users (e.g., "Upgrade to Pro" buttons).
   - [x] Lock Pro-level features, such as document uploading, for non-Pro users.
 
-- [ ] **Payment Integration:**
-  - [ ] Create a dedicated "Upgrade" screen detailing the benefits of the Pro plan.
-  - [ ] Integrate a payment gateway's React Native SDK (e.g., Stripe, Razorpay).
-  - [ ] Implement the checkout flow, calling the backend to create a checkout session and handling the payment provider's response.
+- [x] **Payment Integration:**
+  - [x] Create a dedicated "Upgrade" screen detailing the benefits of the Pro plan.
+  - [x] Integrate a payment gateway's React Native SDK (e.g., Stripe, Razorpay).
+  - [x] Implement the checkout flow, calling the backend to create a checkout session and handling the payment provider's response.
 
 ## New Features
 

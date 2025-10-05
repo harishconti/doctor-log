@@ -6,7 +6,7 @@ This document tracks the tasks required for the beta release of Clinic OS Lite.
 
 - [ ] Implement Role-Based Access Control (RBAC)
 - [ ] Develop New API Endpoints for ClinicalNote, Document, and Appointment
-- [ ] Integrate Payment Gateway (Stripe/Razorpay)
+- [x] Integrate Payment Gateway (Stripe/Razorpay)
 - [ ] Implement robust offline data management
 - [ ] Add comprehensive client-side and server-side validation
 - [ ] Integrate cloud image storage (Cloudinary or AWS S3)
@@ -15,9 +15,9 @@ This document tracks the tasks required for the beta release of Clinic OS Lite.
 
 ## Frontend (Mobile - React Native)
 
-- [ ] Enhance Global State to include subscription information
-- [ ] Implement Conditional UI Rendering based on subscription plan
-- [ ] Integrate Payment Flow
+- [x] Enhance Global State to include subscription information
+- [x] Implement Conditional UI Rendering based on subscription plan
+- [x] Integrate Payment Flow
 - [ ] Implement Document Upload feature
 - [ ] Implement Document List view
 
