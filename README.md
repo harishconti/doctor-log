@@ -22,7 +22,7 @@ The application operates on a two-tier subscription model to cater to different 
 
 Pro subscribers unlock powerful tools designed for deeper analysis and streamlined administration:
 
-- **Web Dashboard:** A comprehensive, desktop-optimized interface that provides:
+- **Web Dashboard (Planned):** A comprehensive, desktop-optimized interface that will provide:
   - **Advanced Analytics:** Visualize patient growth and other key metrics with interactive charts.
   - **Comprehensive Data Management:** View and manage all patient records in a powerful, searchable data grid.
 - **Secure Document Storage:** Securely upload and manage patient-related documents, such as lab reports and prescriptions, from the mobile app.
@@ -35,7 +35,7 @@ Pro subscribers unlock powerful tools designed for deeper analysis and streamlin
 
 ## 🏗️ Technical Architecture
 
-The application is built with a modern, modular architecture designed for scalability and maintainability. For a detailed overview, please see [`Architecture.md`](./Architecture.md). For the development roadmap, see [`todo.md`](./todo.md).
+The application is built with a modern, modular architecture designed for scalability and maintainability. For a detailed overview, please see [`Architecture.md`](./Architecture.md). For the development roadmap and feature status, see [`ROADMAP.md`](./ROADMAP.md).
 
 - **Backend:** A FastAPI application serves as the core of the system, providing a robust API for all client applications.
 - **Database:** MongoDB is used as the database, accessed asynchronously via `motor`.
