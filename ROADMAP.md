@@ -26,7 +26,7 @@ This document outlines the development status and future roadmap for all compone
   - [ ] Implement a view to list, download, and manage a patient's uploaded documents.
 - **General Improvements:**
   - [ ] **Offline Support:** Implement robust offline data management (e.g., using WatermelonDB or Realm) to ensure the app is usable without a constant internet connection.
-  - [ ] **Input Validation:** Add comprehensive client-side validation to all user input fields.
+  - [x] **Input Validation:** Add comprehensive client-side validation to all user input fields.
   - [ ] **UI/UX:** Add haptic feedback and more advanced loading states.
 
 ---
