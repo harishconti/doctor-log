@@ -5,8 +5,13 @@ Welcome to Clinic OS Lite, a comprehensive patient management system designed fo
 ## ✨ Core Features
 
 ### Subscription Tiers
-- **Basic Plan:** Full access to the mobile app with a 90-day trial period. Includes core patient management features.
-- **Pro Plan:** Unlocks advanced features, including a web-based dashboard for analytics and comprehensive data management, and document storage.
+
+The application operates on a two-tier subscription model to cater to different needs:
+
+- **Basic Plan:** Ideal for individual practitioners. New users are automatically enrolled in a 90-day free trial of the Basic Plan.
+  - **Includes:** Full access to the mobile app for complete patient management on the go.
+- **Pro Plan:** Designed for professionals who require advanced data insights and document management capabilities.
+  - **Includes:** All Basic features, plus exclusive access to the web dashboard and secure document storage.
 
 ### Patient Management (All Plans)
 - **Full CRUD Operations:** Create, read, update, and delete patient records.
@@ -14,8 +19,13 @@ Welcome to Clinic OS Lite, a comprehensive patient management system designed fo
 - **Clinical Notes System:** Add and view time-stamped clinical notes for each patient.
 
 ### Pro Features
-- **Web Dashboard:** A desktop-optimized interface for analytics, data visualization, and advanced patient management.
-- **Secure Document Storage:** Upload and manage patient-related documents like lab reports and prescriptions.
+
+Pro subscribers unlock powerful tools designed for deeper analysis and streamlined administration:
+
+- **Web Dashboard:** A comprehensive, desktop-optimized interface that provides:
+  - **Advanced Analytics:** Visualize patient growth and other key metrics with interactive charts.
+  - **Comprehensive Data Management:** View and manage all patient records in a powerful, searchable data grid.
+- **Secure Document Storage:** Securely upload and manage patient-related documents, such as lab reports and prescriptions, from the mobile app.
 
 ### Professional & UX Features
 - **Secure Authentication:** Robust JWT-based authentication with secure token storage for both mobile and web platforms.

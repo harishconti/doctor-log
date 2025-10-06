@@ -1,6 +1,8 @@
+from async_lru import alru_cache
 from app.db.session import PatientCollection
 from typing import List, Dict
 
+@alru_cache(maxsize=32)
 async def get_patient_growth_analytics(user_id: str) -> List[Dict]:
     """
     Generates patient growth analytics data for a specific user.
