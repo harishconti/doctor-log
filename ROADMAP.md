@@ -60,16 +60,16 @@ This is a new, Pro-exclusive application to be built from scratch.
   - [x] Webhook endpoint to handle payment status updates.
 - **Pro-Tier APIs:**
   - [x] API endpoints for `Documents` and `Analytics` are implemented and protected.
+- **Security & Stability:**
+  - [x] **RBAC:** Finalized and polished Role-Based Access Control with `ADMIN`, `DOCTOR`, and `PATIENT` roles.
+  - [x] **Rate Limiting:** Implemented rate limiting across all major API endpoints.
+  - [x] **Server-Side Validation:** Enhanced validation for patient and clinical note data.
 
 ### ⏳ Pending Features
 
 - **Core Functionality:**
-  - [ ] **RBAC:** Finalize and polish Role-Based Access Control.
   - [ ] **Appointments:** Develop API endpoints for appointment management.
   - [ ] **Image Storage:** Integrate with a cloud storage service (e.g., AWS S3, Cloudinary) for document files.
-- **Infrastructure & Quality:**
-  - [ ] **Rate Limiting:** Implement rate limiting with `slowapi` to prevent abuse.
-  - [ ] **Server-Side Validation:** Enhance server-side validation logic (e.g., using Zod via a Python port or more detailed Pydantic validators).
 
 ---
 

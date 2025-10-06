@@ -41,7 +41,7 @@ graph TD
 
 ### 2.3. Architectural Principles
 - **Stateless Backend:** The FastAPI application is stateless, enabling seamless horizontal scaling. State is managed via JWTs or retrieved from the database on demand.
-- **Secure by Design:** Communication is enforced over HTTPS. Authentication relies on JWTs, and authorization is handled at the API level to protect Pro-tier features.
+- **Secure by Design:** Communication is enforced over HTTPS. Authentication relies on JWTs. Authorization is handled at the API level using a **Role-Based Access Control (RBAC)** system and pro-tier feature flags. The API is also protected from abuse via **rate limiting**.
 - **Scalability & Cost-Effectiveness:** The architecture is designed for serverless compute platforms (e.g., Google Cloud Run, AWS Lambda) and leverages managed services (MongoDB Atlas, AWS S3) to reduce operational overhead.
 
 ---
@@ -50,8 +50,8 @@ graph TD
 
 ### 3.1. Backend Service (FastAPI)
 - **Role:** The backend is the central brain of the application. It is responsible for all business logic, data persistence, user authentication, and secure communication with third-party services.
-- **Core Technologies:** Python 3.9+, FastAPI, Pydantic, Motor, `python-jose` and `passlib` for JWT authentication.
-- **Status:** Largely complete. Provides APIs for authentication, patient management, clinical notes, payments (via webhooks), and protected endpoints for documents and analytics.
+- **Core Technologies:** Python 3.9+, FastAPI, Pydantic, Motor, `python-jose` and `passlib` for JWT authentication, and `slowapi` for rate limiting.
+- **Status:** Largely complete. Provides APIs for authentication, patient management, clinical notes, and payments. It includes a robust RBAC system, rate limiting, enhanced server-side validation, and protected endpoints for documents and analytics.
 
 ### 3.2. Mobile Client (React Native)
 - **Role:** The primary, on-the-go interface for all users (Basic and Pro). It is optimized for a mobile-first experience, focusing on daily tasks like patient management and note-taking.
@@ -72,14 +72,18 @@ The application enforces a consistent data structure using Pydantic models.
 Stores information about the medical professionals using the service.
 ```json
 {
-  "_id": "ObjectId",
-  "username": "String",
+  "_id": "String (UUID)",
   "email": "String (Unique, Indexed)",
-  "hashed_password": "String",
+  "password_hash": "String",
+  "full_name": "String",
+  "phone": "String",
+  "medical_specialty": "String",
   "plan": "String (Enum: 'basic', 'pro')",
-  "status": "String (Enum: 'trialing', 'active', 'inactive')",
-  "trial_ends_at": "ISODate",
-  "created_at": "ISODate"
+  "role": "String (Enum: 'admin', 'doctor', 'patient')",
+  "subscription_status": "String (Enum: 'trialing', 'active', 'canceled', 'past_due')",
+  "subscription_end_date": "ISODate",
+  "created_at": "ISODate",
+  "updated_at": "ISODate"
 }
 ```
 
@@ -87,13 +91,20 @@ Stores information about the medical professionals using the service.
 Stores demographic and contact information for each patient.
 ```json
 {
-  "_id": "ObjectId",
-  "user_id": "ObjectId (Indexed)", // Foreign key to `users`
+  "_id": "String (UUID)",
+  "patient_id": "String (Auto-Incrementing, e.g., PAT001)",
+  "user_id": "String (Indexed, Foreign key to `users`)",
   "name": "String",
-  "phone_number": "String",
+  "phone": "String",
+  "email": "String",
   "address": "String",
-  "notes": "String",
-  "created_at": "ISODate"
+  "location": "String",
+  "initial_complaint": "String",
+  "initial_diagnosis": "String",
+  "group": "String",
+  "is_favorite": "Boolean",
+  "created_at": "ISODate",
+  "updated_at": "ISODate"
 }
 ```
 
@@ -101,10 +112,11 @@ Stores demographic and contact information for each patient.
 Stores timestamped clinical entries for each patient.
 ```json
 {
-  "_id": "ObjectId",
-  "patient_id": "ObjectId (Indexed)", // Foreign key to `patients`
-  "user_id": "ObjectId (Indexed)", // Foreign key to `users`
+  "_id": "String (UUID)",
+  "patient_id": "String (Indexed, Foreign key to `patients`)",
+  "user_id": "String (Indexed, Foreign key to `users`)",
   "content": "String",
+  "visit_type": "String (Enum: 'regular', 'follow-up', 'emergency')",
   "created_at": "ISODate"
 }
 ```
@@ -130,17 +142,17 @@ Stores metadata about files uploaded by Pro users. The files themselves are stor
 This section outlines key user journeys.
 
 ### 5.1. User Registration & Trial Activation
-A new user is registered and automatically placed on a 90-day trial.
+A new user is registered and automatically placed on a 90-day trial with a default role.
 ```mermaid
 sequenceDiagram
     participant Client as Mobile App
     participant Server as FastAPI Backend
     participant DB as MongoDB
-    Client->>Server: 1. POST /api/users/register (username, email, password)
+    Client->>Server: 1. POST /api/auth/register (full_name, email, password)
     Server->>Server: 2. Validate input & hash password
-    Server->>DB: 3. INSERT INTO users (plan: 'basic', status: 'trialing', trial_ends_at: NOW() + 90 days)
+    Server->>DB: 3. INSERT INTO users (plan: 'basic', role: 'patient', status: 'trialing', trial_ends_at: NOW() + 90 days)
     DB-->>Server: 4. Return created user document
-    Server->>Server: 5. Generate JWT for the new user
+    Server->>Server: 5. Generate JWT (containing user_id, plan, role)
     Server-->>Client: 6. 201 Created (user data + JWT)
 ```
 
@@ -170,8 +182,8 @@ sequenceDiagram
 
 ### 6.1. Backend Directory Structure
 The backend code is organized into a clean, service-oriented structure within `backend/app/`.
-- **`api/`**: API endpoint definitions (routers).
-- **`core/`**: Core application logic, configuration, and security.
+- **`api/`**: API endpoint definitions (routers), decorated with rate limits.
+- **`core/`**: Core application logic, configuration, and security (`security.py` for RBAC, `limiter.py` for rate limiting).
 - **`db/`**: Database session management and initialization.
 - **`models/`**: Pydantic models for database collections.
 - **`schemas/`**: Pydantic schemas for API request/response validation.
