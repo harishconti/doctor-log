@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, validator
 from typing import List, Optional, Literal
 from datetime import datetime
 import uuid
+import re
 
 # --- Patient Schemas ---
 class PatientBase(BaseModel):
@@ -15,6 +16,18 @@ class PatientBase(BaseModel):
     photo: Optional[str] = None  # base64 encoded image, validation can be complex
     group: Optional[str] = Field(default="general", max_length=50)
     is_favorite: bool = False
+
+    @validator('name')
+    def name_must_not_be_empty(cls, v):
+        if not v.strip():
+            raise ValueError('Name must not be empty')
+        return v
+
+    @validator('phone')
+    def validate_phone_number(cls, v):
+        if v and not re.match(r'^\+?1?\d{9,15}$', v):
+            raise ValueError('Invalid phone number format.')
+        return v
 
 class PatientCreate(PatientBase):
     pass
@@ -30,6 +43,18 @@ class PatientUpdate(BaseModel):
     photo: Optional[str] = None
     group: Optional[str] = Field(default=None, max_length=50)
     is_favorite: Optional[bool] = None
+
+    @validator('name')
+    def name_must_not_be_empty(cls, v):
+        if v and not v.strip():
+            raise ValueError('Name must not be empty')
+        return v
+
+    @validator('phone')
+    def validate_phone_number(cls, v):
+        if v and not re.match(r'^\+?1?\d{9,15}$', v):
+            raise ValueError('Invalid phone number format.')
+        return v
 
 class PatientInDBBase(PatientBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

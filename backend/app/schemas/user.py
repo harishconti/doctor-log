@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import uuid
 import re
 from enum import Enum
+from .role import UserRole
 
 class UserPlan(str, Enum):
     BASIC = "basic"
@@ -23,6 +24,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     plan: UserPlan = UserPlan.BASIC
+    role: UserRole = UserRole.PATIENT
     password: str = Field(
         ...,
         min_length=8,
@@ -47,6 +49,7 @@ class UserUpdate(BaseModel):
 class UserInDBBase(UserBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     plan: UserPlan = UserPlan.BASIC
+    role: UserRole = UserRole.PATIENT
     subscription_status: SubscriptionStatus = SubscriptionStatus.TRIALING
     subscription_end_date: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(days=90))
     created_at: datetime = Field(default_factory=datetime.utcnow)

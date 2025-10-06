@@ -2,11 +2,12 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 import jwt
 
 from app.core.config import settings
 from app.schemas.user import UserPlan
+from app.schemas.role import UserRole
 
 # --- CryptContext for Password Hashing ---
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -25,14 +26,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 # --- JWT Token Creation ---
-def create_access_token(subject: str, plan: str, expires_delta: Optional[timedelta] = None) -> str:
-    """Creates a new access token."""
+def create_access_token(subject: str, plan: str, role: str, expires_delta: Optional[timedelta] = None) -> str:
+    """Creates a new access token with plan and role."""
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    to_encode = {"exp": expire, "sub": str(subject), "plan": plan}
+    to_encode = {"exp": expire, "sub": str(subject), "plan": plan, "role": role}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
@@ -117,3 +118,42 @@ async def require_pro_user(credentials: HTTPAuthorizationCredentials = Depends(r
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials"
         )
+
+# --- Dependency Factory for Role-Based Access ---
+def require_role(required_role: UserRole):
+    """
+    Dependency factory to ensure the user has a specific role.
+    """
+    async def role_checker(credentials: HTTPAuthorizationCredentials = Depends(reusable_oauth2)) -> str:
+        """
+        Checks if the user has the required role.
+        """
+        try:
+            payload = jwt.decode(
+                credentials.credentials, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+            )
+            user_id: str = payload.get("sub")
+            user_role: str = payload.get("role")
+
+            if user_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid authentication credentials: user ID not in token",
+                )
+
+            if user_role != required_role:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Insufficient permissions. {required_role.value.capitalize()} role required.",
+                )
+
+            return user_id
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired"
+            )
+        except jwt.PyJWTError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials"
+            )
+    return role_checker

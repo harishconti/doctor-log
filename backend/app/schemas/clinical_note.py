@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from datetime import datetime
 from typing import Optional, Literal
 import uuid
@@ -6,6 +6,12 @@ import uuid
 class ClinicalNoteBase(BaseModel):
     content: str = Field(..., min_length=1, max_length=5000, description="The content of the clinical note.")
     visit_type: Literal["regular", "follow-up", "emergency"] = "regular"
+
+    @validator('content')
+    def content_must_not_be_empty(cls, v):
+        if not v.strip():
+            raise ValueError('Content must not be empty')
+        return v
 
 class NoteCreate(ClinicalNoteBase):
     """Schema for creating a note from an API request body."""

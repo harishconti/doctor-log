@@ -65,7 +65,8 @@ class MedicalContactsAPITester:
                 "password": "testpassword123",
                 "full_name": "Dr. Test Doctor",
                 "phone": "+1234567890",
-                "medical_specialty": "general"
+                "medical_specialty": "general",
+                "role": "doctor"
             }
             
             response = self.session.post(f"{API_BASE}/auth/register", json=user_data)
@@ -96,7 +97,8 @@ class MedicalContactsAPITester:
                 "email": f"pro.user.{datetime.now().timestamp()}@clinic.com",
                 "password": "pro_password_123",
                 "full_name": "Dr. Pro",
-                "plan": "pro"
+                "plan": "pro",
+                "role": "doctor"
             }
             response = self.session.post(f"{API_BASE}/auth/register", json=pro_user_data)
             success = response.status_code == 201
