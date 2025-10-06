@@ -6,6 +6,7 @@ from app.api import auth, patients, webhooks, documents, analytics, payments
 from app.core.config import settings
 from app.db.session import shutdown_db_client
 from app.db.init_db import init_dummy_data
+from app.db.indexing import create_indexes
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.requests import Request
@@ -45,6 +46,7 @@ async def on_startup():
     - Initialize dummy data for development environments.
     """
     logging.info("Application starting up...")
+    await create_indexes()
     await init_dummy_data()
     logging.info("Dummy data initialization complete.")
 

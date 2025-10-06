@@ -1,9 +1,10 @@
+from async_lru import alru_cache
 from app.db.session import PatientCollection, CounterCollection
 from app.schemas.patient import PatientCreate, PatientUpdate, NoteCreate
 from app.schemas.clinical_note import ClinicalNoteCreate
 from app.models.patient import Patient
 from app.models.clinical_note import ClinicalNote
-from app.services import clinical_note_service
+from app.services import clinical_note_service, analytics_service
 from typing import List, Optional, Dict
 from bson import ObjectId
 import uuid
@@ -34,6 +35,14 @@ async def create_patient(patient_data: PatientCreate, user_id: str) -> Patient:
     patient_dict["updated_at"] = datetime.utcnow()
 
     await PatientCollection.insert_one(patient_dict)
+
+    # Invalidate caches
+    get_patients_by_user_id.cache_clear()
+    get_patient_groups.cache_clear()
+    get_user_stats.cache_clear()
+    analytics_service.get_patient_growth_analytics.cache_clear()
+
+
     return Patient(**patient_dict)
 
 async def get_patient_by_id(patient_id: str, user_id: str) -> Optional[Patient]:
@@ -45,14 +54,14 @@ async def get_patient_by_id(patient_id: str, user_id: str) -> Optional[Patient]:
         return Patient(**patient)
     return None
 
-async def get_patients_by_user_id(
+def _build_patient_query(
     user_id: str,
     search: Optional[str] = None,
     group: Optional[str] = None,
     favorites_only: bool = False
-) -> List[Patient]:
+) -> Dict:
     """
-    Retrieves a list of patients for a user, with optional filters.
+    Builds the MongoDB query for fetching patients based on filters.
     """
     query = {"user_id": user_id}
     if search:
@@ -66,7 +75,20 @@ async def get_patients_by_user_id(
         query["group"] = group
     if favorites_only:
         query["is_favorite"] = True
+    return query
 
+
+@alru_cache(maxsize=128)
+async def get_patients_by_user_id(
+    user_id: str,
+    search: Optional[str] = None,
+    group: Optional[str] = None,
+    favorites_only: bool = False
+) -> List[Patient]:
+    """
+    Retrieves a list of patients for a user, with optional filters.
+    """
+    query = _build_patient_query(user_id, search, group, favorites_only)
     patients_cursor = PatientCollection.find(query).sort("created_at", -1)
     patients = await patients_cursor.to_list(1000)
     return [Patient(**p) for p in patients]
@@ -90,6 +112,11 @@ async def update_patient(patient_id: str, patient_data: PatientUpdate, user_id: 
     if result.matched_count == 0:
         return None
 
+    # Invalidate caches
+    get_patients_by_user_id.cache_clear()
+    get_patient_groups.cache_clear()
+    get_user_stats.cache_clear()
+
     return await get_patient_by_id(patient_id, user_id)
 
 async def delete_patient(patient_id: str, user_id: str) -> bool:
@@ -97,6 +124,15 @@ async def delete_patient(patient_id: str, user_id: str) -> bool:
     Deletes a patient by their ID. Returns True if successful.
     """
     result = await PatientCollection.delete_one({"id": patient_id, "user_id": user_id})
+
+    if result.deleted_count > 0:
+        # Invalidate caches
+        get_patients_by_user_id.cache_clear()
+        get_patient_groups.cache_clear()
+        get_user_stats.cache_clear()
+        analytics_service.get_patient_growth_analytics.cache_clear()
+
+
     return result.deleted_count > 0
 
 async def add_note_to_patient(patient_id: str, note_data: NoteCreate, user_id: str) -> Optional[ClinicalNote]:
@@ -141,6 +177,7 @@ async def get_patient_notes(patient_id: str, user_id: str) -> Optional[List[Clin
     sorted_notes = sorted(notes, key=lambda n: n.created_at, reverse=True)
     return sorted_notes
 
+@alru_cache(maxsize=32)
 async def get_patient_groups(user_id: str) -> List[str]:
     """
     Retrieves all unique patient groups for a user.
@@ -148,6 +185,7 @@ async def get_patient_groups(user_id: str) -> List[str]:
     groups = await PatientCollection.distinct("group", {"user_id": user_id})
     return [group for group in groups if group]
 
+@alru_cache(maxsize=32)
 async def get_user_stats(user_id: str) -> Dict[str, any]:
     """
     Retrieves statistics for a user.

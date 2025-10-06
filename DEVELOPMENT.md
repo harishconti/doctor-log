@@ -19,11 +19,12 @@ Objective: To update the existing mobile application to support the new subscrip
 * A new screen (`frontend/app/upgrade.tsx`) has been created to outline the benefits of the Pro plan.
 * The "Upgrade" button triggers a call to the backend's `/api/payments/create-checkout-session` endpoint.
 * The app uses the `checkout_url` from the backend response to launch a secure checkout flow using `expo-web-browser`. After payment, the user's state is refreshed to reflect their new "Pro" status.
-### New Feature Implementation
-* Task: Build the UI for the new Pro features that are accessible on mobile.
-* Implementation:
-* Document Upload: On the Patient Detail screen, add a new section for documents. This will include a button that opens the device's file picker. Upon selection, the app will make a multipart/form-data request to a new /api/documents/upload endpoint.
-* Document List: Display a list of uploaded documents for the patient, with an option to download or view them.
+### Document Management (Mobile) - Backend Complete / Frontend Pending
+* Task: Build the mobile UI for document management, a Pro-level feature.
+* Backend Status: **Completed**. The necessary API endpoints (`/api/documents/`) for uploading and retrieving documents are implemented and protected for Pro users.
+* Frontend Implementation (Pending):
+    * **Document Upload:** On the Patient Detail screen, a new section for documents will be added. This will include a button to open the device's file picker. Upon selection, the app will make a multipart/form-data request to the `/api/documents/upload` endpoint.
+    * **Document List:** A list of uploaded documents for the patient will be displayed, with options to download or view them.
 ## Part 2: Web Dashboard (React.js) - New Build Itinerary
 Objective: To build a new, secure, and data-rich web application from scratch for Pro subscribers. This will be a separate project, likely in a new dashboard/ directory.
 ### 1. Core Features & Architecture

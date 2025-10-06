@@ -12,3 +12,4 @@ bcrypt==4.2.1
 requests==2.32.4
 gunicorn
 slowapi
+async-lru

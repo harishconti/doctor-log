@@ -53,6 +53,60 @@ All interactions follow a standard client-server RESTful pattern.
     6. The client receives the response and updates its UI accordingly.
     7. For asynchronous events, such as a successful payment, the Payment Gateway sends a webhook to a dedicated endpoint on the backend, which then updates the user's subscription status in the database.
 
+## 5. Backend Directory Structure
+
+The backend application code is organized into the following modules within the `backend/app/` directory, promoting a clean separation of concerns:
+
+- **`api/`**: Contains the API endpoint definitions (routers).
+  - `auth.py`: Handles user authentication, token generation, and user registration.
+  - `patients.py`: Manages patient data (CRUD operations).
+- **`core/`**: Core application logic and configuration.
+  - `config.py`: Manages application settings and environment variables.
+  - `security.py`: Contains security-related dependencies, like RBAC checks.
+- **`db/`**: Database-related code.
+  - `session.py`: Handles the database connection lifecycle.
+  - `init_db.py`: Contains logic to initialize the database with demo data on startup.
+- **`models/`**: Pydantic models representing the data structures stored in the database.
+- **`schemas/`**: Pydantic schemas for API request and response validation.
+- **`services/`**: Contains the business logic of the application, separating it from the API layer.
+
+## 6. Production Environment & Deployment
+
+While the application can be run locally for development, a production environment requires a more robust and scalable setup. The architecture is designed to be deployed on modern cloud infrastructure.
+
+### 6.1. Infrastructure Recommendations
+
+- **Web Server:** The containerized FastAPI application should be run with a production-grade ASGI server like **Gunicorn** with **Uvicorn workers**, running behind a reverse proxy like **Nginx**. Deploying to a serverless platform like **Google Cloud Run** abstracts away much of this management.
+- **Load Balancer:** To distribute incoming traffic across multiple instances of the application for high availability and scalability. This is handled automatically by platforms like Google Cloud Run.
+- **Database:** A managed MongoDB cluster (e.g., **MongoDB Atlas**) is strongly recommended for automated backups, scaling, monitoring, and high availability.
+- **Caching:** A caching layer (e.g., **Redis**) should be used to store frequently accessed data (like patient lists or analytics) to reduce database load and improve response times.
+
+### 6.2. Monitoring and Logging
+
+- **Monitoring:** A monitoring solution (e.g., **Prometheus with Grafana**, or a commercial APM tool like **Datadog**) to track application performance (latency, error rates) and resource utilization.
+- **Logging:** Centralized logging (e.g., **ELK stack** - Elasticsearch, Logstash, Kibana) to aggregate logs from all application instances for easier debugging and analysis. Cloud provider solutions like **Google Cloud Logging** are also excellent alternatives.
+
+### 6.3. CI/CD
+
+- **Continuous Integration/Continuous Deployment (CI/CD):** A CI/CD pipeline (e.g., **GitHub Actions**, Jenkins, GitLab CI) should be set up to automate testing and deployment, ensuring code quality and rapid iteration.
+
+## 7. Implementation Status
+
+This section describes the state of the application as of the last update.
+
+### 7.1. What is Complete
+
+- **Core API Functionality:** The APIs for user authentication, subscription management, and full patient/note CRUD are implemented.
+- **Modular Architecture:** The codebase is well-structured into modules for API, services, models, and database interactions.
+- **Pro-Tier Feature Protection:** Pro-only endpoints for Documents and Analytics are protected by RBAC dependencies.
+- **Payment Integration:** The backend supports creating checkout sessions and handling webhooks from a payment provider.
+- **Comprehensive Test Suite:** A test suite (`backend_test.py`) exists for testing the backend functionality.
+
+### 7.2. Development vs. Production Mocking
+
+- **Database:** For development, the application can use a local MongoDB instance and is initialized with demo data via `init_db.py`. In production, it should connect to a managed cluster like **MongoDB Atlas**.
+- **Web Server:** The built-in `uvicorn` development server is used for local development with hot-reloading. In production, this is replaced by a robust **Gunicorn/Uvicorn** setup within a container.
+
 
 Of course. Here is a detailed elaboration of the Component Breakdown section for your technical architecture document.
 
