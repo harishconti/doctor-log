@@ -3,18 +3,21 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   SafeAreaView,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  ScrollView
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { registerSchema, RegisterFormData } from '../lib/validation';
+import ControlledInput from '../components/forms/ControlledInput';
 
 const SPECIALTIES = [
   'general',
@@ -30,52 +33,33 @@ const SPECIALTIES = [
 ];
 
 export default function RegisterScreen() {
-  const [formData, setFormData] = useState({
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    full_name: '',
-    medical_specialty: 'general'
-  });
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [medicalSpecialty, setMedicalSpecialty] = useState('general');
   
   const { register } = useAuth();
   const router = useRouter();
 
-  const handleRegister = async () => {
-    const { email, phone, password, confirmPassword, full_name, medical_specialty } = formData;
-    
-    // Validation
-    if (!email.trim() || !password.trim() || !full_name.trim()) {
-      Alert.alert('Error', 'Please fill in all required fields');
-      return;
+  const { control, handleSubmit, setValue } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      full_name: '',
+      email: '',
+      phone: '',
+      password: '',
+      confirmPassword: '',
     }
+  });
 
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
-      return;
-    }
-
+  const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
       await register({
-        email: email.trim(),
-        phone: phone.trim(),
-        password,
-        full_name: full_name.trim(),
-        medical_specialty
+        ...data,
+        medical_specialty: medicalSpecialty,
       });
       router.replace('/');
     } catch (error: any) {
-      Alert.alert('Registration Failed', error.message);
+      Alert.alert('Registration Failed', error.message || 'An unexpected error occurred.');
     } finally {
       setIsLoading(false);
     }
@@ -83,10 +67,6 @@ export default function RegisterScreen() {
 
   const navigateToLogin = () => {
     router.back();
-  };
-
-  const updateFormData = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -107,43 +87,32 @@ export default function RegisterScreen() {
 
           {/* Registration Form */}
           <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Ionicons name="person" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Full Name *"
-                value={formData.full_name}
-                onChangeText={(value) => updateFormData('full_name', value)}
-                autoCapitalize="words"
-                placeholderTextColor="#999"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Ionicons name="mail" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email Address *"
-                value={formData.email}
-                onChangeText={(value) => updateFormData('email', value)}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                placeholderTextColor="#999"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Ionicons name="call" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Phone Number"
-                value={formData.phone}
-                onChangeText={(value) => updateFormData('phone', value)}
-                keyboardType="phone-pad"
-                placeholderTextColor="#999"
-              />
-            </View>
+            <ControlledInput
+              control={control}
+              name="full_name"
+              placeholder="Full Name *"
+              iconName="person"
+              autoCapitalize="words"
+              placeholderTextColor="#999"
+            />
+            <ControlledInput
+              control={control}
+              name="email"
+              placeholder="Email Address *"
+              iconName="mail"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholderTextColor="#999"
+            />
+            <ControlledInput
+              control={control}
+              name="phone"
+              placeholder="Phone Number"
+              iconName="call"
+              keyboardType="phone-pad"
+              placeholderTextColor="#999"
+            />
 
             <View style={styles.inputContainer}>
               <Ionicons name="medical" size={20} color="#666" style={styles.inputIcon} />
@@ -155,67 +124,38 @@ export default function RegisterScreen() {
                     'Select your specialty',
                     SPECIALTIES.map(specialty => ({
                       text: specialty.charAt(0).toUpperCase() + specialty.slice(1),
-                      onPress: () => updateFormData('medical_specialty', specialty)
+                      onPress: () => setMedicalSpecialty(specialty)
                     }))
                   );
                 }}
               >
                 <Text style={styles.pickerText}>
-                  {formData.medical_specialty.charAt(0).toUpperCase() + formData.medical_specialty.slice(1)}
+                  {medicalSpecialty.charAt(0).toUpperCase() + medicalSpecialty.slice(1)}
                 </Text>
                 <Ionicons name="chevron-down" size={20} color="#666" />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password *"
-                value={formData.password}
-                onChangeText={(value) => updateFormData('password', value)}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                placeholderTextColor="#999"
-              />
-              <TouchableOpacity 
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeIcon}
-              >
-                <Ionicons 
-                  name={showPassword ? 'eye' : 'eye-off'} 
-                  size={20} 
-                  color="#666" 
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm Password *"
-                value={formData.confirmPassword}
-                onChangeText={(value) => updateFormData('confirmPassword', value)}
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
-                placeholderTextColor="#999"
-              />
-              <TouchableOpacity 
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={styles.eyeIcon}
-              >
-                <Ionicons 
-                  name={showConfirmPassword ? 'eye' : 'eye-off'} 
-                  size={20} 
-                  color="#666" 
-                />
-              </TouchableOpacity>
-            </View>
+            <ControlledInput
+              control={control}
+              name="password"
+              placeholder="Password *"
+              iconName="lock-closed"
+              isPassword
+              placeholderTextColor="#999"
+            />
+            <ControlledInput
+              control={control}
+              name="confirmPassword"
+              placeholder="Confirm Password *"
+              iconName="lock-closed"
+              isPassword
+              placeholderTextColor="#999"
+            />
 
             <TouchableOpacity 
               style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
-              onPress={handleRegister}
+              onPress={handleSubmit(onSubmit)}
               disabled={isLoading}
             >
               {isLoading ? (
@@ -316,12 +256,6 @@ const styles = StyleSheet.create({
   inputIcon: {
     marginRight: 12,
   },
-  input: {
-    flex: 1,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: '#333',
-  },
   pickerContainer: {
     flex: 1,
     flexDirection: 'row',
@@ -332,9 +266,6 @@ const styles = StyleSheet.create({
   pickerText: {
     fontSize: 16,
     color: '#333',
-  },
-  eyeIcon: {
-    padding: 4,
   },
   registerButton: {
     backgroundColor: '#2ecc71',

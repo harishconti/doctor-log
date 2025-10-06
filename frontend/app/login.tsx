@@ -3,40 +3,42 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   SafeAreaView,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  ScrollView
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { loginSchema, LoginFormData } from '../lib/validation';
+import ControlledInput from '../components/forms/ControlledInput';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('dr.sarah@clinic.com'); // Pre-filled for demo
-  const [password, setPassword] = useState('password123'); // Pre-filled for demo
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
+  const { control, handleSubmit, setValue } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: 'dr.sarah@clinic.com', // Pre-filled for demo
+      password: 'password123',   // Pre-filled for demo
+    },
+  });
 
+  const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(data.email, data.password);
       router.replace('/');
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message);
+      Alert.alert('Login Failed', error.message || 'An unexpected error occurred.');
     } finally {
       setIsLoading(false);
     }
@@ -48,11 +50,11 @@ export default function LoginScreen() {
 
   const loadDemoAccount = (userType: 'cardiology' | 'physiotherapy') => {
     if (userType === 'cardiology') {
-      setEmail('dr.sarah@clinic.com');
-      setPassword('password123');
+      setValue('email', 'dr.sarah@clinic.com');
+      setValue('password', 'password123');
     } else {
-      setEmail('dr.mike@physio.com');  
-      setPassword('password123');
+      setValue('email', 'dr.mike@physio.com');
+      setValue('password', 'password123');
     }
   };
 
@@ -91,46 +93,28 @@ export default function LoginScreen() {
 
           {/* Login Form */}
           <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Ionicons name="mail" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email Address"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                placeholderTextColor="#999"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                placeholderTextColor="#999"
-              />
-              <TouchableOpacity 
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeIcon}
-              >
-                <Ionicons 
-                  name={showPassword ? 'eye' : 'eye-off'} 
-                  size={20} 
-                  color="#666" 
-                />
-              </TouchableOpacity>
-            </View>
+            <ControlledInput
+              control={control}
+              name="email"
+              placeholder="Email Address"
+              iconName="mail"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholderTextColor="#999"
+            />
+            <ControlledInput
+              control={control}
+              name="password"
+              placeholder="Password"
+              iconName="lock-closed"
+              isPassword
+              placeholderTextColor="#999"
+            />
 
             <TouchableOpacity 
               style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-              onPress={handleLogin}
+              onPress={handleSubmit(onSubmit)}
               disabled={isLoading}
             >
               {isLoading ? (

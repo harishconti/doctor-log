@@ -3,20 +3,23 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   SafeAreaView,
   Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Image
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { patientSchema, PatientFormData } from '../lib/validation';
+import ControlledInput from '../components/forms/ControlledInput';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -35,37 +38,26 @@ const MEDICAL_GROUPS = [
   'post_surgical'
 ];
 
-interface PatientFormData {
-  name: string;
-  phone: string;
-  email: string;
-  address: string;
-  location: string;
-  initial_complaint: string;
-  initial_diagnosis: string;
-  photo: string;
-  group: string;
-  is_favorite: boolean;
-}
-
 export default function AddPatientScreen() {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
-  
-  const [formData, setFormData] = useState<PatientFormData>({
-    name: '',
-    phone: '',
-    email: '',
-    address: '',
-    location: 'Clinic',
-    initial_complaint: '',
-    initial_diagnosis: '',
-    photo: '',
-    group: 'general',
-    is_favorite: false
-  });
-  
   const [loading, setLoading] = useState(false);
+
+  const { control, handleSubmit, setValue, watch } = useForm<PatientFormData>({
+    resolver: zodResolver(patientSchema),
+    defaultValues: {
+      full_name: '',
+      email: '',
+      phone_number: '',
+      date_of_birth: '',
+      address: '',
+    },
+  });
+
+  const photo = watch('photo');
+  const isFavorite = watch('is_favorite');
+  const location = watch('location', 'Clinic');
+  const medicalGroup = watch('group', 'general');
 
   React.useEffect(() => {
     if (!isAuthenticated) {
@@ -73,13 +65,8 @@ export default function AddPatientScreen() {
     }
   }, [isAuthenticated]);
 
-  const updateFormData = (field: keyof PatientFormData, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
     if (status !== 'granted') {
       Alert.alert('Permission Required', 'Camera roll permissions are required to select photos');
       return;
@@ -90,17 +77,16 @@ export default function AddPatientScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
-      base64: true
+      base64: true,
     });
 
     if (!result.canceled && result.assets[0].base64) {
-      updateFormData('photo', result.assets[0].base64);
+      setValue('photo', result.assets[0].base64);
     }
   };
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    
     if (status !== 'granted') {
       Alert.alert('Permission Required', 'Camera permissions are required to take photos');
       return;
@@ -110,53 +96,36 @@ export default function AddPatientScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
-      base64: true
+      base64: true,
     });
 
     if (!result.canceled && result.assets[0].base64) {
-      updateFormData('photo', result.assets[0].base64);
+      setValue('photo', result.assets[0].base64);
     }
   };
 
   const showImagePicker = () => {
-    Alert.alert(
-      'Select Photo',
-      'Choose how to add a patient photo',
-      [
-        { text: 'Camera', onPress: takePhoto },
-        { text: 'Photo Library', onPress: pickImage },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    Alert.alert('Select Photo', 'Choose how to add a patient photo', [
+      { text: 'Camera', onPress: takePhoto },
+      { text: 'Photo Library', onPress: pickImage },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
-  const validateForm = () => {
-    if (!formData.name.trim()) {
-      Alert.alert('Validation Error', 'Patient name is required');
-      return false;
-    }
-    
-    if (formData.email && !formData.email.includes('@')) {
-      Alert.alert('Validation Error', 'Please enter a valid email address');
-      return false;
-    }
-    
-    return true;
-  };
-
-  const savePatient = async () => {
-    if (!validateForm()) return;
-
+  const onSubmit = async (data: PatientFormData) => {
     setLoading(true);
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/patients`, formData);
+      const response = await axios.post(`${BACKEND_URL}/api/patients`, {
+          ...data,
+          group: medicalGroup,
+          location: location,
+          is_favorite: isFavorite,
+      });
       
       if (response.data.success) {
-        Alert.alert(
-          'Success',
-          'Patient added successfully!',
-          [{ text: 'OK', onPress: () => router.back() }]
-        );
+        Alert.alert('Success', 'Patient added successfully!', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
       }
     } catch (error: any) {
       const message = error.response?.data?.detail || 'Failed to add patient';
@@ -179,7 +148,7 @@ export default function AddPatientScreen() {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Add Patient</Text>
           <TouchableOpacity 
-            onPress={savePatient} 
+            onPress={handleSubmit(onSubmit)}
             style={[styles.headerButton, loading && styles.disabledButton]}
             disabled={loading}
           >
@@ -191,9 +160,9 @@ export default function AddPatientScreen() {
           {/* Photo Section */}
           <View style={styles.photoSection}>
             <TouchableOpacity style={styles.photoContainer} onPress={showImagePicker}>
-              {formData.photo ? (
+              {photo ? (
                 <Image 
-                  source={{ uri: `data:image/jpeg;base64,${formData.photo}` }}
+                  source={{ uri: `data:image/jpeg;base64,${photo}` }}
                   style={styles.patientPhoto}
                 />
               ) : (
@@ -209,53 +178,42 @@ export default function AddPatientScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Basic Information</Text>
             
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Full Name *</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Enter patient's full name"
-                value={formData.name}
-                onChangeText={(value) => updateFormData('name', value)}
-                autoCapitalize="words"
-              />
-            </View>
-
+            <ControlledInput
+              control={control}
+              name="full_name"
+              label="Full Name *"
+              placeholder="Enter patient's full name"
+              autoCapitalize="words"
+            />
             <View style={styles.inputRow}>
               <View style={styles.inputHalf}>
-                <Text style={styles.inputLabel}>Phone</Text>
-                <TextInput
-                  style={styles.textInput}
+                <ControlledInput
+                  control={control}
+                  name="phone_number"
+                  label="Phone"
                   placeholder="Phone number"
-                  value={formData.phone}
-                  onChangeText={(value) => updateFormData('phone', value)}
                   keyboardType="phone-pad"
                 />
               </View>
-              
               <View style={styles.inputHalf}>
-                <Text style={styles.inputLabel}>Email</Text>
-                <TextInput
-                  style={styles.textInput}
+                <ControlledInput
+                  control={control}
+                  name="email"
+                  label="Email"
                   placeholder="Email address"
-                  value={formData.email}
-                  onChangeText={(value) => updateFormData('email', value)}
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
               </View>
             </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Address</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Patient's address"
-                value={formData.address}
-                onChangeText={(value) => updateFormData('address', value)}
-                multiline
-                numberOfLines={2}
-              />
-            </View>
+            <ControlledInput
+              control={control}
+              name="address"
+              label="Address"
+              placeholder="Patient's address"
+              multiline
+              numberOfLines={2}
+            />
           </View>
 
           {/* Medical Information */}
@@ -268,19 +226,15 @@ export default function AddPatientScreen() {
                 <TouchableOpacity 
                   style={styles.pickerButton}
                   onPress={() => {
-                    Alert.alert(
-                      'Visit Location',
-                      'Select visit location',
-                      [
-                        { text: 'Clinic', onPress: () => updateFormData('location', 'Clinic') },
-                        { text: 'Home Visit', onPress: () => updateFormData('location', 'Home Visit') },
-                        { text: 'Hospital', onPress: () => updateFormData('location', 'Hospital') },
-                        { text: 'Emergency', onPress: () => updateFormData('location', 'Emergency') }
-                      ]
-                    );
+                    Alert.alert('Visit Location', 'Select visit location', [
+                      { text: 'Clinic', onPress: () => setValue('location', 'Clinic') },
+                      { text: 'Home Visit', onPress: () => setValue('location', 'Home Visit') },
+                      { text: 'Hospital', onPress: () => setValue('location', 'Hospital') },
+                      { text: 'Emergency', onPress: () => setValue('location', 'Emergency') },
+                    ]);
                   }}
                 >
-                  <Text style={styles.pickerText}>{formData.location}</Text>
+                  <Text style={styles.pickerText}>{location}</Text>
                   <Ionicons name="chevron-down" size={20} color="#666" />
                 </TouchableOpacity>
               </View>
@@ -290,49 +244,42 @@ export default function AddPatientScreen() {
                 <TouchableOpacity 
                   style={styles.pickerButton}
                   onPress={() => {
-                    Alert.alert(
-                      'Medical Group',
-                      'Select medical specialty',
+                    Alert.alert('Medical Group', 'Select medical specialty',
                       MEDICAL_GROUPS.map(group => ({
                         text: group.charAt(0).toUpperCase() + group.slice(1).replace('_', ' '),
-                        onPress: () => updateFormData('group', group)
+                        onPress: () => setValue('group', group),
                       }))
                     );
                   }}
                 >
                   <Text style={styles.pickerText}>
-                    {formData.group.charAt(0).toUpperCase() + formData.group.slice(1).replace('_', ' ')}
+                    {medicalGroup.charAt(0).toUpperCase() + medicalGroup.slice(1).replace('_', ' ')}
                   </Text>
                   <Ionicons name="chevron-down" size={20} color="#666" />
                 </TouchableOpacity>
               </View>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Initial Complaint</Text>
-              <TextInput
-                style={styles.textAreaInput}
+            <ControlledInput
+                control={control}
+                name="initial_complaint"
+                label="Initial Complaint"
                 placeholder="Describe the patient's initial complaint or symptoms..."
-                value={formData.initial_complaint}
-                onChangeText={(value) => updateFormData('initial_complaint', value)}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
-              />
-            </View>
+                />
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Initial Diagnosis</Text>
-              <TextInput
-                style={styles.textAreaInput}
+            <ControlledInput
+                control={control}
+                name="initial_diagnosis"
+                label="Initial Diagnosis"
                 placeholder="Enter initial diagnosis or assessment..."
-                value={formData.initial_diagnosis}
-                onChangeText={(value) => updateFormData('initial_diagnosis', value)}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
-              />
-            </View>
+             />
+
           </View>
 
           {/* Options */}
@@ -341,13 +288,13 @@ export default function AddPatientScreen() {
             
             <TouchableOpacity 
               style={styles.favoriteOption}
-              onPress={() => updateFormData('is_favorite', !formData.is_favorite)}
+              onPress={() => setValue('is_favorite', !isFavorite)}
             >
               <View style={styles.favoriteLeft}>
                 <Ionicons 
-                  name={formData.is_favorite ? 'heart' : 'heart-outline'} 
+                  name={isFavorite ? 'heart' : 'heart-outline'}
                   size={24} 
-                  color={formData.is_favorite ? '#e74c3c' : '#666'} 
+                  color={isFavorite ? '#e74c3c' : '#666'}
                 />
                 <Text style={styles.favoriteText}>Mark as Favorite</Text>
               </View>
@@ -486,6 +433,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    height: 50
   },
   pickerText: {
     fontSize: 16,
