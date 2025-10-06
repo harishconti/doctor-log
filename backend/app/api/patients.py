@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from typing import List, Optional
-from app.core.security import get_current_user, require_pro_user
+from app.core.security import get_current_user, require_pro_user, require_role
+from app.schemas.role import UserRole
 from app.services import patient_service, clinical_note_service
+from app.core.limiter import limiter
 from app.schemas.patient import (
     PatientCreate, PatientUpdate, Patient
 )
@@ -12,12 +14,14 @@ router = APIRouter()
 import logging
 
 @router.post("/", response_model=dict, status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/minute")
 async def create_patient(
+    request: Request,
     patient_data: PatientCreate,
-    current_user_id: str = Depends(get_current_user)
+    current_user_id: str = Depends(require_role(UserRole.DOCTOR))
 ):
     """
-    Create a new patient record.
+    Create a new patient record. (Doctor-only)
     """
     try:
         patient = await patient_service.create_patient(patient_data, current_user_id)
@@ -30,7 +34,9 @@ async def create_patient(
         )
 
 @router.get("/", response_model=dict)
+@limiter.limit("60/minute")
 async def get_all_patients(
+    request: Request,
     search: Optional[str] = None,
     group: Optional[str] = None,
     favorites_only: bool = False,
@@ -55,7 +61,9 @@ async def get_all_patients(
         )
 
 @router.get("/{id}", response_model=dict)
+@limiter.limit("120/minute")
 async def get_patient_by_id(
+    request: Request,
     id: str,
     current_user_id: str = Depends(get_current_user)
 ):
@@ -68,13 +76,15 @@ async def get_patient_by_id(
     return {"success": True, "patient": patient}
 
 @router.put("/{id}", response_model=dict)
+@limiter.limit("30/minute")
 async def update_patient(
+    request: Request,
     id: str,
     patient_data: PatientUpdate,
-    current_user_id: str = Depends(get_current_user)
+    current_user_id: str = Depends(require_role(UserRole.DOCTOR))
 ):
     """
-    Update a patient's details.
+    Update a patient's details. (Doctor-only)
     """
     patient = await patient_service.update_patient(id, patient_data, current_user_id)
     if not patient:
@@ -82,12 +92,14 @@ async def update_patient(
     return {"success": True, "patient": patient}
 
 @router.delete("/{id}", response_model=dict)
+@limiter.limit("10/minute")
 async def delete_patient(
+    request: Request,
     id: str,
-    current_user_id: str = Depends(get_current_user)
+    current_user_id: str = Depends(require_role(UserRole.DOCTOR))
 ):
     """
-    Delete a patient record.
+    Delete a patient record. (Doctor-only)
     """
     success = await patient_service.delete_patient(id, current_user_id)
     if not success:
@@ -97,13 +109,15 @@ async def delete_patient(
 # --- Notes Routes ---
 
 @router.post("/{id}/notes", response_model=dict, status_code=status.HTTP_201_CREATED)
+@limiter.limit("45/minute")
 async def add_patient_note(
+    request: Request,
     id: str,
     note_data: NoteCreate,
-    current_user_id: str = Depends(get_current_user)
+    current_user_id: str = Depends(require_role(UserRole.DOCTOR))
 ):
     """
-    Add a new note to a patient's record.
+    Add a new note to a patient's record. (Doctor-only)
     """
     note = await patient_service.add_note_to_patient(id, note_data, current_user_id)
     if not note:
@@ -111,7 +125,9 @@ async def add_patient_note(
     return {"success": True, "note": note}
 
 @router.get("/{id}/notes", response_model=dict)
+@limiter.limit("120/minute")
 async def get_patient_notes(
+    request: Request,
     id: str,
     current_user_id: str = Depends(get_current_user)
 ):
@@ -126,7 +142,8 @@ async def get_patient_notes(
 # --- Other Utility Routes ---
 
 @router.get("/groups/", response_model=dict)
-async def get_patient_groups(current_user_id: str = Depends(get_current_user)):
+@limiter.limit("60/minute")
+async def get_patient_groups(request: Request, current_user_id: str = Depends(get_current_user)):
     """
     Get a list of unique patient groups for the user.
     """
@@ -141,7 +158,8 @@ async def get_patient_groups(current_user_id: str = Depends(get_current_user)):
         )
 
 @router.get("/stats/", response_model=dict)
-async def get_statistics(current_user_id: str = Depends(get_current_user)):
+@limiter.limit("30/minute")
+async def get_statistics(request: Request, current_user_id: str = Depends(get_current_user)):
     """
     Get user-specific statistics (total patients, favorites, etc.).
     """
@@ -158,7 +176,8 @@ async def get_statistics(current_user_id: str = Depends(get_current_user)):
 # --- Pro-Only Endpoint Example ---
 
 @router.get("/pro-feature/", response_model=dict)
-async def pro_feature_endpoint(current_user_id: str = Depends(require_pro_user)):
+@limiter.limit("30/minute")
+async def pro_feature_endpoint(request: Request, current_user_id: str = Depends(require_pro_user)):
     """
     An example endpoint that is only accessible to PRO users.
     """

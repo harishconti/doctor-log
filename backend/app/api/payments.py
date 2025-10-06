@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from app.core.security import get_current_user
 from app.services import user_service
+from app.core.limiter import limiter
 import logging
 
 router = APIRouter()
 
 @router.post("/create-checkout-session", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
 async def create_checkout_session(
+    request: Request,
     current_user_id: str = Depends(get_current_user)
 ):
     """

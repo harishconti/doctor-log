@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import List, Dict
 from app.core.security import require_pro_user
 from app.services import analytics_service
+from app.core.limiter import limiter
 
 router = APIRouter()
 
 @router.get("/patient-growth", response_model=List[Dict])
+@limiter.limit("15/minute")
 async def get_patient_growth(
+    request: Request,
     current_user_id: str = Depends(require_pro_user)
 ):
     """
