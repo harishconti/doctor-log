@@ -8,11 +8,13 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
-  Image
+  Image,
+  Switch
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
+import { useAppStore } from '../store/useAppStore';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
 
@@ -33,6 +35,9 @@ interface Stats {
 export default function ProfileScreen() {
   const { user, logout, refreshUser } = useAuth();
   const router = useRouter();
+  const { settings, updateSettings } = useAppStore(
+    (state) => ({ settings: state.settings, updateSettings: state.updateSettings })
+  );
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -419,6 +424,21 @@ export default function ProfileScreen() {
           </View>
         )}
 
+        {/* Preferences Section */}
+        <View style={styles.preferencesSection}>
+          <Text style={styles.sectionTitle}>Preferences</Text>
+          <View style={styles.preferenceItem}>
+            <Ionicons name="pulse" size={24} color="#666" />
+            <Text style={styles.actionText}>Enable Haptic Feedback</Text>
+            <Switch
+              value={settings.hapticEnabled}
+              onValueChange={(value) => updateSettings({ hapticEnabled: value })}
+              trackColor={{ false: '#767577', true: '#81b0ff' }}
+              thumbColor={settings.hapticEnabled ? '#2ecc71' : '#f4f3f4'}
+            />
+          </View>
+        </View>
+
         {/* Account Actions */}
         <View style={styles.actionsSection}>
           <TouchableOpacity 
@@ -666,5 +686,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     marginLeft: 12,
+  },
+  preferencesSection: {
+    backgroundColor: '#fff',
+    padding: 16,
+    marginBottom: 16,
+  },
+  preferenceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
   },
 });

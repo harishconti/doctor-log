@@ -84,32 +84,34 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const user = useAppStore((state) => state.user);
   const setUser = useAppStore((state) => state.setUser);
-  const _hasHydrated = useAppStore((state) => state._hasHydrated);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const isAuthenticated = !!user && !!token;
 
   useEffect(() => {
-    const loadToken = async () => {
+    const initializeApp = async () => {
       try {
+        // 1. Load token from secure storage
         const storedToken = await SecureStorageAdapter.getItem('auth_token');
         if (storedToken) {
           setToken(storedToken);
           axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
         }
+
+        // 2. Explicitly rehydrate the store and wait for it to finish
+        await useAppStore.persist.rehydrate();
+
       } catch (e) {
-        console.error("Failed to load auth token from storage", e);
+        console.error("Initialization error:", e);
+      } finally {
+        // 3. Only set loading to false after all async operations are done
+        setIsLoading(false);
       }
     };
-    loadToken();
-  }, []);
 
-  useEffect(() => {
-    if (_hasHydrated) {
-      setIsLoading(false);
-    }
-  }, [_hasHydrated]);
+    initializeApp();
+  }, []);
 
   const login = async (email: string, password: string) => {
     try {

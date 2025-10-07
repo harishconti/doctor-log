@@ -14,6 +14,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -39,9 +40,16 @@ export default function Index() {
     setLoading,
     setOffline,
     toggleFavorite,
+    settings,
   } = useAppStore();
 
   const [refreshing, setRefreshing] = React.useState(false);
+
+  const triggerHaptic = (style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Light) => {
+    if (settings.hapticEnabled) {
+      Haptics.impactAsync(style);
+    }
+  };
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -55,8 +63,12 @@ export default function Index() {
     if (!isAuthenticated) return;
     
     try {
-      if (showRefresh) setRefreshing(true);
-      else setLoading('patients', true);
+      if (showRefresh) {
+        setRefreshing(true);
+        triggerHaptic();
+      } else {
+        setLoading('patients', true);
+      }
 
       // Try to fetch from API first
       const response = await axios.get(`${BACKEND_URL}/api/patients`, {
@@ -112,10 +124,12 @@ export default function Index() {
   };
 
   const navigateToProfile = () => {
+    triggerHaptic();
     router.push('/profile');
   };
 
   const addNewPatient = () => {
+    triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
     router.push('/add-patient');
   };
 
@@ -180,7 +194,10 @@ export default function Index() {
         styles.filterButton,
         selectedFilter === filter && styles.activeFilterButton
       ]}
-      onPress={() => setSelectedFilter(filter)}
+      onPress={() => {
+        triggerHaptic();
+        setSelectedFilter(filter);
+      }}
     >
       <Text
         style={[
