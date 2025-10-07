@@ -80,10 +80,6 @@ interface ErrorState {
 }
 
 interface AppState {
-  // App state
-  _hasHydrated: boolean;
-  setHasHydrated: (hydrated: boolean) => void;
-
   // User data
   user: User | null;
 
@@ -176,8 +172,6 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       // Initial state
-      _hasHydrated: false,
-      setHasHydrated: (hydrated) => set({ _hasHydrated: hydrated }),
       user: null,
       patients: [],
       searchQuery: '',
@@ -401,9 +395,6 @@ export const useAppStore = create<AppState>()(
         offlineQueue: state.offlineQueue,
         lastSyncTime: state.lastSyncTime
       }),
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
-      },
     }
   )
 );

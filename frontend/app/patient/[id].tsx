@@ -13,7 +13,9 @@ import {
   Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAppStore } from '../../store/useAppStore';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import axios from 'axios';
 
@@ -49,6 +51,13 @@ export default function PatientDetailsScreen() {
   const { id } = useLocalSearchParams();
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
+  const settings = useAppStore((state) => state.settings);
+
+  const triggerHaptic = (style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Light) => {
+    if (settings.hapticEnabled) {
+      Haptics.impactAsync(style);
+    }
+  };
   
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,7 +92,7 @@ export default function PatientDetailsScreen() {
 
   const toggleFavorite = async () => {
     if (!patient) return;
-
+    triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const response = await axios.put(
         `${BACKEND_URL}/api/patients/${patient.id}`,
@@ -112,6 +121,9 @@ export default function PatientDetailsScreen() {
         await loadPatientDetails();
         setNewNote('');
         setShowAddNote(false);
+        if (settings.hapticEnabled) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to add note');
@@ -224,7 +236,10 @@ export default function PatientDetailsScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+        <TouchableOpacity onPress={() => {
+          triggerHaptic();
+          router.back();
+        }} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Patient Details</Text>
@@ -268,7 +283,10 @@ export default function PatientDetailsScreen() {
             {patient.phone && (
               <TouchableOpacity 
                 style={styles.contactItem}
-                onPress={() => makePhoneCall(patient.phone)}
+                onPress={() => {
+                  triggerHaptic();
+                  makePhoneCall(patient.phone);
+                }}
               >
                 <Ionicons name="call" size={20} color="#2ecc71" />
                 <Text style={styles.contactText}>{patient.phone}</Text>
@@ -279,7 +297,10 @@ export default function PatientDetailsScreen() {
             {patient.email && (
               <TouchableOpacity 
                 style={styles.contactItem}
-                onPress={() => sendEmail(patient.email)}
+                onPress={() => {
+                  triggerHaptic();
+                  sendEmail(patient.email);
+                }}
               >
                 <Ionicons name="mail" size={20} color="#3498db" />
                 <Text style={styles.contactText}>{patient.email}</Text>
@@ -335,7 +356,10 @@ export default function PatientDetailsScreen() {
         ) : (
           <TouchableOpacity
             style={styles.upgradeCard}
-            onPress={() => router.push('/upgrade')}
+            onPress={() => {
+              triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
+              router.push('/upgrade');
+            }}
           >
             <Ionicons name="rocket-outline" size={32} color="#f39c12" />
             <View style={styles.upgradeTextContainer}>
@@ -350,9 +374,12 @@ export default function PatientDetailsScreen() {
         <View style={styles.notesCard}>
           <View style={styles.notesHeader}>
             <Text style={styles.sectionTitle}>Medical Notes ({patient.notes?.length || 0})</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.addNoteButton}
-              onPress={() => setShowAddNote(true)}
+              onPress={() => {
+                triggerHaptic();
+                setShowAddNote(true);
+              }}
             >
               <Ionicons name="add" size={20} color="#fff" />
             </TouchableOpacity>
@@ -380,9 +407,12 @@ export default function PatientDetailsScreen() {
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.editButton}
-            onPress={() => router.push(`/edit-patient/${patient.id}`)}
+            onPress={() => {
+              triggerHaptic();
+              router.push(`/edit-patient/${patient.id}`);
+            }}
           >
             <Ionicons name="create" size={20} color="#fff" />
             <Text style={styles.buttonText}>Edit Patient</Text>
