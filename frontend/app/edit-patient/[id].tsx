@@ -16,13 +16,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import axios from 'axios';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { patientSchema, PatientFormData } from '../../lib/validation';
 import ControlledInput from '../../components/forms/ControlledInput';
-
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+import { database } from '../../models/database';
+import Patient from '../../models/Patient';
+import withObservables from '@nozbe/with-observables';
 
 const MEDICAL_GROUPS = [
   'general', 'cardiology', 'physiotherapy', 'orthopedics', 'neurology',
@@ -30,12 +30,10 @@ const MEDICAL_GROUPS = [
   'obstetric_cardiology', 'post_surgical'
 ];
 
-export default function EditPatientScreen() {
-  const { id } = useLocalSearchParams();
+function EditPatientScreen({ patient }) {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
   
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const { control, handleSubmit, setValue, watch, reset, formState: { isDirty } } = useForm<PatientFormData>({
@@ -50,39 +48,27 @@ export default function EditPatientScreen() {
   useEffect(() => {
     if (!isAuthenticated) {
       router.replace('/login');
-      return;
     }
-    loadPatientData();
-  }, [id, isAuthenticated]);
+  }, [isAuthenticated]);
 
-  const loadPatientData = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(`${BACKEND_URL}/api/patients/${id}`);
-      if (response.data.success) {
-        const patient = response.data.patient;
-        const patientData = {
-          full_name: patient.name || '',
-          phone_number: patient.phone_number || '',
-          email: patient.email || '',
-          address: patient.address || '',
-          date_of_birth: patient.date_of_birth || '',
-          photo: patient.photo || '',
-          is_favorite: patient.is_favorite || false,
-          location: patient.location || 'Clinic',
-          group: patient.group || 'general',
-          initial_complaint: patient.initial_complaint || '',
-          initial_diagnosis: patient.initial_diagnosis || '',
-        };
-        reset(patientData);
-      }
-    } catch (error: any) {
-      Alert.alert('Error', 'Failed to load patient data');
-      router.back();
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (patient) {
+      const patientData = {
+        full_name: patient.name || '',
+        phone_number: patient.phone || '',
+        email: patient.email || '',
+        address: patient.address || '',
+        photo: patient.photo || '',
+        is_favorite: patient.isFavorite || false,
+        location: patient.location || 'Clinic',
+        group: patient.group || 'general',
+        initial_complaint: patient.initialComplaint || '',
+        initial_diagnosis: patient.initialDiagnosis || '',
+      };
+      reset(patientData);
     }
-  };
+  }, [patient, reset]);
+
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -129,16 +115,28 @@ export default function EditPatientScreen() {
   };
 
   const onSubmit = async (data: PatientFormData) => {
+    if (!patient) return;
     setSaving(true);
     try {
-      const response = await axios.put(`${BACKEND_URL}/api/patients/${id}`, data);
-      if (response.data.success) {
-        Alert.alert('Success', 'Patient updated successfully!', [
-          { text: 'OK', onPress: () => router.back() },
-        ]);
-      }
+      await database.write(async () => {
+        await patient.update(p => {
+          p.name = data.full_name;
+          p.phone = data.phone_number;
+          p.email = data.email;
+          p.address = data.address;
+          p.photo = data.photo;
+          p.isFavorite = data.is_favorite;
+          p.location = data.location;
+          p.group = data.group;
+          p.initialComplaint = data.initial_complaint;
+          p.initialDiagnosis = data.initial_diagnosis;
+        });
+      });
+      Alert.alert('Success', 'Patient updated successfully!', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
     } catch (error: any) {
-      const message = error.response?.data?.detail || 'Failed to update patient';
+      const message = 'Failed to update patient';
       Alert.alert('Error', message);
     } finally {
       setSaving(false);
@@ -146,6 +144,7 @@ export default function EditPatientScreen() {
   };
 
   const deletePatient = () => {
+    if (!patient) return;
     Alert.alert(
       'Delete Patient', 'Are you sure? This action cannot be undone.', [
         { text: 'Cancel', style: 'cancel' },
@@ -154,7 +153,9 @@ export default function EditPatientScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await axios.delete(`${BACKEND_URL}/api/patients/${id}`);
+              await database.write(async () => {
+                await patient.destroyPermanently();
+              });
               Alert.alert('Deleted', 'Patient removed successfully.', [
                 { text: 'OK', onPress: () => router.replace('/') },
               ]);
@@ -167,7 +168,7 @@ export default function EditPatientScreen() {
     );
   };
 
-  if (loading) {
+  if (!patient) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -280,6 +281,17 @@ export default function EditPatientScreen() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+}
+
+const enhance = withObservables(['id'], ({ id }) => ({
+  patient: database.collections.get<Patient>('patients').findAndObserve(id),
+}));
+
+const EnhancedEditPatient = enhance(EditPatientScreen);
+
+export default function EditPatientContainer() {
+  const { id } = useLocalSearchParams();
+  return <EnhancedEditPatient id={id} />;
 }
 
 const styles = StyleSheet.create({

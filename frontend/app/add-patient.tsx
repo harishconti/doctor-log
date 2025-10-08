@@ -15,13 +15,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import axios from 'axios';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { patientSchema, PatientFormData } from '../lib/validation';
 import ControlledInput from '../components/forms/ControlledInput';
-
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+import { database } from '../models/database';
+import Patient from '../models/Patient';
+import uuid from 'react-native-uuid';
 
 const MEDICAL_GROUPS = [
   'general',
@@ -115,18 +115,24 @@ export default function AddPatientScreen() {
   const onSubmit = async (data: PatientFormData) => {
     setLoading(true);
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/patients`, {
-          ...data,
-          group: medicalGroup,
-          location: location,
-          is_favorite: isFavorite,
+      await database.write(async () => {
+        await database.collections.get<Patient>('patients').create(patient => {
+          patient.patientId = `PAT-${uuid.v4()}`;
+          patient.name = data.full_name;
+          patient.phone = data.phone_number;
+          patient.email = data.email;
+          patient.address = data.address;
+          patient.location = location;
+          patient.initialComplaint = data.initial_complaint;
+          patient.initialDiagnosis = data.initial_diagnosis;
+          patient.photo = data.photo;
+          patient.group = medicalGroup;
+          patient.isFavorite = isFavorite;
+        });
       });
-      
-      if (response.data.success) {
-        Alert.alert('Success', 'Patient added successfully!', [
-          { text: 'OK', onPress: () => router.back() },
-        ]);
-      }
+      Alert.alert('Success', 'Patient added successfully!', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
     } catch (error: any) {
       const message = error.response?.data?.detail || 'Failed to add patient';
       Alert.alert('Error', message);
