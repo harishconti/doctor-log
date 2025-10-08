@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,31 +15,33 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'expo-router';
-import { useAppStore, Patient } from '../store/useAppStore';
+import { useAppStore } from '../store/useAppStore';
+import { map } from 'rxjs/operators';
+import { sync } from '../services/sync';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+// WatermelonDB imports
+import { database } from '../models/database';
+import Patient from '../models/Patient';
+import withObservables from '@nozbe/with-observables';
+import { Q } from '@nozbe/watermelondb';
 
-export default function Index() {
+// The raw UI component
+function Index({ patients, groups, totalPatientCount }) {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
   const {
-    patients,
     searchQuery,
     selectedFilter,
     loading,
     isOffline,
-    getFilteredPatients,
-    setPatients,
+    lastSyncTime,
     setSearchQuery,
     setSelectedFilter,
     setLoading,
     setOffline,
-    toggleFavorite,
     settings,
   } = useAppStore();
 
@@ -58,8 +60,7 @@ export default function Index() {
     }
   }, [authLoading, isAuthenticated]);
 
-  // Load patients from API or local storage
-  const loadPatients = useCallback(async (showRefresh = false) => {
+  const handleSync = useCallback(async (showRefresh = false) => {
     if (!isAuthenticated) return;
     
     try {
@@ -67,58 +68,37 @@ export default function Index() {
         setRefreshing(true);
         triggerHaptic();
       } else {
-        setLoading('patients', true);
+        setLoading('sync', true);
       }
 
-      // Try to fetch from API first
-      const response = await axios.get(`${BACKEND_URL}/api/patients`, {
-        timeout: 10000
-      });
+      await sync();
+      setOffline(false);
 
-      if (response.data.success) {
-        const fetchedPatients = response.data.patients;
-        setPatients(fetchedPatients);
-        
-        // Save to local storage for offline access
-        await AsyncStorage.setItem('patients_cache', JSON.stringify(fetchedPatients));
-        setOffline(false);
-      }
     } catch (error) {
-      console.log('API Error, loading from cache:', error);
-      
-      // Load from local storage if API fails
-      try {
-        const cachedData = await AsyncStorage.getItem('patients_cache');
-        if (cachedData) {
-          const cachedPatients = JSON.parse(cachedData);
-          setPatients(cachedPatients);
-          setOffline(true);
-        }
-      } catch (cacheError) {
-        console.error('Cache load error:', cacheError);
-        Alert.alert('Error', 'Failed to load patients data');
-      }
+      console.log('Sync failed, using local DB:', error);
+      setOffline(true);
     } finally {
-      setLoading('patients', false);
+      setLoading('sync', false);
       setRefreshing(false);
     }
-  }, [isAuthenticated, setPatients, setLoading, setOffline]);
+  }, [isAuthenticated, setLoading, setOffline]);
 
   useEffect(() => {
     if (isAuthenticated) {
-      loadPatients();
+      handleSync();
     }
-  }, [isAuthenticated, loadPatients]);
+  }, [isAuthenticated, handleSync]);
 
-  const handleToggleFavorite = async (patientId: string) => {
+  const handleToggleFavorite = async (patient: Patient) => {
     try {
-      await toggleFavorite(patientId);
+      await database.write(async () => {
+        await patient.update(p => {
+          p.isFavorite = !p.isFavorite;
+        });
+      });
+      triggerHaptic();
     } catch (error) {
-      Alert.alert(
-        'Update Failed', 
-        'Failed to update favorite status. Please check your connection and try again.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Update Failed', 'Failed to update favorite status.');
       console.error('Failed to update favorite status:', error);
     }
   };
@@ -133,14 +113,10 @@ export default function Index() {
     router.push('/add-patient');
   };
 
-  const filteredPatients = getFilteredPatients();
-
   const renderPatientCard = ({ item }: { item: Patient }) => (
     <TouchableOpacity
       style={styles.patientCard}
-      onPress={() => {
-        router.push(`/patient/${item.id}`);
-      }}
+      onPress={() => router.push(`/patient/${item.id}`)}
     >
       <View style={styles.cardContent}>
         <View style={styles.patientInfo}>
@@ -154,31 +130,28 @@ export default function Index() {
               <Ionicons name="person" size={24} color="#666" />
             </View>
           )}
-          
           <View style={styles.patientDetails}>
             <Text style={styles.patientName}>{item.name}</Text>
-            <Text style={styles.patientId}>ID: {item.patient_id}</Text>
+            <Text style={styles.patientId}>ID: {item.patientId}</Text>
             {item.phone ? <Text style={styles.patientContact}>{item.phone}</Text> : null}
-            {item.initial_complaint ? (
+            {item.initialComplaint ? (
               <Text style={styles.complaint} numberOfLines={1}>
-                {item.initial_complaint}
+                {item.initialComplaint}
               </Text>
             ) : null}
           </View>
         </View>
-
         <View style={styles.cardActions}>
           <TouchableOpacity
-            onPress={() => handleToggleFavorite(item.id)}
+            onPress={() => handleToggleFavorite(item)}
             style={styles.favoriteButton}
           >
             <Ionicons
-              name={item.is_favorite ? 'heart' : 'heart-outline'}
+              name={item.isFavorite ? 'heart' : 'heart-outline'}
               size={20}
-              color={item.is_favorite ? '#e74c3c' : '#666'}
+              color={item.isFavorite ? '#e74c3c' : '#666'}
             />
           </TouchableOpacity>
-          
           <View style={styles.groupBadge}>
             <Text style={styles.groupText}>{item.group || 'General'}</Text>
           </View>
@@ -187,105 +160,66 @@ export default function Index() {
     </TouchableOpacity>
   );
 
-  const renderFilterButton = (filter: string, label: string) => (
-    <TouchableOpacity
-      key={filter}
-      style={[
-        styles.filterButton,
-        selectedFilter === filter && styles.activeFilterButton
-      ]}
-      onPress={() => {
-        triggerHaptic();
-        setSelectedFilter(filter);
-      }}
-    >
-      <Text
-        style={[
-          styles.filterText,
-          selectedFilter === filter && styles.activeFilterText
-        ]}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-
-  const getFilterButtons = () => {
+  const filterButtons = useMemo(() => {
     const buttons = [
       { filter: 'all', label: 'All' },
       { filter: 'favorites', label: 'Favorites' }
     ];
-
-    // Add unique groups
-    const groups = [...new Set(patients.map(p => p.group).filter(Boolean))];
-    groups.forEach(group => {
-      buttons.push({ filter: group, label: group });
+    (groups || []).forEach(group => {
+      if(group) {
+        buttons.push({ filter: group, label: group });
+      }
     });
-
     return buttons;
-  };
+  }, [groups]);
 
-  // Show loading screen while checking auth
-  if (authLoading) {
+  if (authLoading || loading.patients) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color="#2ecc71" />
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>
+            {authLoading ? 'Loading...' : 'Loading patients...'}
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  // Don't render anything if not authenticated (will redirect)
   if (!isAuthenticated) {
     return null;
   }
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color="#2ecc71" />
-          <Text style={styles.loadingText}>Loading patients...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
+      {/* Header, Offline Banner, Search, Filters */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerTitle}>Medical Contacts</Text>
           <Text style={styles.headerSubtitle}>Welcome, {user?.full_name?.split(' ')[0]}</Text>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.profileButton}
-            onPress={navigateToProfile}
-          >
+          <TouchableOpacity style={styles.syncButton} onPress={() => handleSync(true)} disabled={refreshing || loading.sync}>
+            <Ionicons name={refreshing || loading.sync ? "sync-circle" : "sync"} size={24} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.profileButton} onPress={navigateToProfile}>
             <Ionicons name="person-circle" size={32} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={addNewPatient}
-          >
+          <TouchableOpacity style={styles.addButton} onPress={addNewPatient}>
             <Ionicons name="add" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Offline Banner */}
       {isOffline && (
         <View style={styles.offlineBanner}>
           <Ionicons name="wifi-outline" size={16} color="#fff" />
-          <Text style={styles.offlineText}>Offline Mode - Data may not be current</Text>
+          <Text style={styles.offlineText}>
+            Offline Mode - {lastSyncTime ? `Last synced: ${new Date(lastSyncTime).toLocaleTimeString()}`: 'Never synced'}
+          </Text>
         </View>
       )}
 
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
         <TextInput
@@ -297,26 +231,37 @@ export default function Index() {
         />
       </View>
 
-      {/* Filters */}
       <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}
-        data={getFilterButtons()}
-        renderItem={({ item }) => renderFilterButton(item.filter, item.label)}
+        data={filterButtons}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            key={item.filter}
+            style={[styles.filterButton, selectedFilter === item.filter && styles.activeFilterButton]}
+            onPress={() => {
+              triggerHaptic();
+              setSelectedFilter(item.filter);
+            }}
+          >
+            <Text style={[styles.filterText, selectedFilter === item.filter && styles.activeFilterText]}>
+              {item.label}
+            </Text>
+          </TouchableOpacity>
+        )}
         keyExtractor={(item) => item.filter}
         contentContainerStyle={styles.filtersContainer}
       />
 
-      {/* Patients List */}
       <FlatList
-        data={filteredPatients}
+        data={patients}
         renderItem={renderPatientCard}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.patientsList}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => loadPatients(true)}
+        onRefresh={() => handleSync(true)}
             colors={['#2ecc71']}
           />
         }
@@ -331,10 +276,12 @@ export default function Index() {
         }
       />
 
-      {/* Stats Footer */}
       <View style={styles.statsFooter}>
         <Text style={styles.statsText}>
-          {filteredPatients.length} of {patients.length} patients
+          {patients.length} of {totalPatientCount} patients
+        </Text>
+        <Text style={styles.syncTimeText}>
+          {lastSyncTime ? `Last synced: ${new Date(lastSyncTime).toLocaleTimeString()}`: ''}
         </Text>
         {user?.subscription_plan && (
           <Text style={styles.planText}>
@@ -345,6 +292,44 @@ export default function Index() {
     </SafeAreaView>
   );
 }
+
+const enhance = withObservables(['searchQuery', 'selectedFilter'], ({ searchQuery, selectedFilter }) => {
+  const patientCollection = database.collections.get<Patient>('patients');
+  let query = patientCollection.query();
+
+  if (searchQuery) {
+    const likeQuery = Q.like(`%${searchQuery.toLowerCase()}%`);
+    query = query.where(Q.or(Q.where('name', likeQuery), Q.where('patient_id', likeQuery)));
+  }
+
+  if (selectedFilter && selectedFilter !== 'all') {
+    if (selectedFilter === 'favorites') {
+      query = query.where('is_favorite', true);
+    } else {
+      query = query.where('group', selectedFilter);
+    }
+  }
+
+  return {
+    patients: query.observe(),
+    groups: patientCollection.query(Q.where('group', Q.notEq(null))).observe().pipe(
+      map(ps => [...new Set(ps.map(p => p.group))])
+    ),
+    totalPatientCount: patientCollection.query().observeCount(),
+  };
+});
+
+const IndexContainer = () => {
+  const { searchQuery, selectedFilter } = useAppStore(
+    (state) => ({ searchQuery: state.searchQuery, selectedFilter: state.selectedFilter }),
+    // Replace with shallow for better performance if comparing objects
+  );
+
+  const EnhancedIndex = enhance({ searchQuery, selectedFilter });
+  return <EnhancedIndex />;
+};
+
+export default IndexContainer;
 
 const styles = StyleSheet.create({
   container: {
@@ -393,6 +378,10 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     gap: 12,
+    alignItems: 'center',
+  },
+  syncButton: {
+    padding: 4,
   },
   profileButton: {
     padding: 4,
@@ -458,6 +447,10 @@ const styles = StyleSheet.create({
   filterText: {
     fontSize: 14,
     color: '#666',
+  },
+  syncTimeText: {
+    fontSize: 12,
+    color: '#999',
   },
   activeFilterText: {
     color: '#fff',

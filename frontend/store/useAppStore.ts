@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -16,37 +15,6 @@ export interface User {
   trial_end_date: string;
   created_at: string;
   updated_at: string;
-}
-
-export interface Patient {
-  id: string;
-  patient_id: string;
-  name: string;
-  phone: string;
-  email: string;
-  address: string;
-  location: string;
-  initial_complaint: string;
-  initial_diagnosis: string;
-  photo: string;
-  group: string;
-  is_favorite: boolean;
-  notes: PatientNote[];
-  created_at: string;
-  updated_at: string;
-  // Offline sync metadata
-  _offline_created?: boolean;
-  _offline_modified?: boolean;
-  _needs_sync?: boolean;
-}
-
-export interface PatientNote {
-  id: string;
-  content: string;
-  timestamp: string;
-  visit_type: string;
-  created_by: string;
-  _offline_created?: boolean;
 }
 
 export interface AppSettings {
@@ -83,8 +51,7 @@ interface AppState {
   // User data
   user: User | null;
 
-  // Patients data
-  patients: Patient[];
+  // Search and filter state
   searchQuery: string;
   selectedFilter: string;
   
@@ -99,21 +66,12 @@ interface AppState {
   lastSyncTime: string | null;
   settings: AppSettings;
   
-  // Offline queue
-  offlineQueue: any[];
-  
   // Actions
   setUser: (user: User | null) => void;
-  setPatients: (patients: Patient[]) => void;
-  addPatient: (patient: Patient) => void;
-  updatePatient: (id: string, updates: Partial<Patient>) => void;
-  removePatient: (id: string) => void;
-  toggleFavorite: (patientId: string) => Promise<void>;
   
-  // Search and filter
+  // Search and filter actions
   setSearchQuery: (query: string) => void;
   setSelectedFilter: (filter: string) => void;
-  getFilteredPatients: () => Patient[];
   
   // Granular loading state actions
   setLoading: (key: keyof LoadingState, loading: boolean) => void;
@@ -124,12 +82,6 @@ interface AppState {
   // App state actions
   setOffline: (offline: boolean) => void;
   updateSettings: (settings: Partial<AppSettings>) => void;
-  
-  // Offline actions
-  addToOfflineQueue: (action: any) => void;
-  clearOfflineQueue: () => void;
-  markPatientForSync: (id: string) => void;
-  getPatientsNeedingSync: () => Patient[];
   
   // Convenience getters
   isAnyLoading: () => boolean;
@@ -173,7 +125,6 @@ export const useAppStore = create<AppState>()(
     (set, get) => ({
       // Initial state
       user: null,
-      patients: [],
       searchQuery: '',
       selectedFilter: 'all',
       loading: initialLoadingState,
@@ -181,141 +132,13 @@ export const useAppStore = create<AppState>()(
       isOffline: false,
       lastSyncTime: null,
       settings: defaultSettings,
-      offlineQueue: [],
 
       // User actions
       setUser: (user) => set({ user }),
 
-      // Patient actions
-      setPatients: (patients) => set({ patients }),
-      
-      addPatient: (patient) => {
-        const patients = get().patients;
-        const newPatient = { 
-          ...patient, 
-          _offline_created: get().isOffline,
-          _needs_sync: get().isOffline 
-        };
-        set({ patients: [newPatient, ...patients] });
-        
-        if (get().isOffline) {
-          get().addToOfflineQueue({
-            type: 'CREATE_PATIENT',
-            data: newPatient,
-            timestamp: new Date().toISOString()
-          });
-        }
-      },
-      
-      updatePatient: (id, updates) => {
-        const patients = get().patients.map(p => 
-          p.id === id 
-            ? { 
-                ...p, 
-                ...updates, 
-                _offline_modified: get().isOffline,
-                _needs_sync: true
-              }
-            : p
-        );
-        set({ patients });
-        
-        if (get().isOffline) {
-          get().addToOfflineQueue({
-            type: 'UPDATE_PATIENT',
-            id,
-            data: updates,
-            timestamp: new Date().toISOString()
-          });
-        }
-      },
-      
-      removePatient: (id) => {
-        const patients = get().patients.filter(p => p.id !== id);
-        set({ patients });
-        
-        if (get().isOffline) {
-          get().addToOfflineQueue({
-            type: 'DELETE_PATIENT',
-            id,
-            timestamp: new Date().toISOString()
-          });
-        }
-      },
-
-      toggleFavorite: async (patientId) => {
-        const originalPatients = get().patients;
-        const patient = originalPatients.find(p => p.id === patientId);
-        if (!patient) return;
-
-        // Optimistic update
-        const optimisticPatients = originalPatients.map(p =>
-          p.id === patientId ? { ...p, is_favorite: !p.is_favorite } : p
-        );
-        set({ patients: optimisticPatients });
-
-        // Haptic feedback
-        try {
-          const { settings } = get();
-          if (settings.hapticEnabled) {
-            const { default: Haptics } = await import('expo-haptics');
-            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          }
-        } catch (hapticError) {
-          console.log('Haptic feedback not available:', hapticError);
-        }
-
-        try {
-          const response = await axios.put(
-            `${BACKEND_URL}/api/patients/${patientId}`,
-            { is_favorite: !patient.is_favorite }
-          );
-
-          if (response.data.success) {
-            // Update cache
-            await AsyncStorage.setItem('patients_cache', JSON.stringify(optimisticPatients));
-          } else {
-            throw new Error('API returned unsuccessful response');
-          }
-        } catch (error) {
-          // Revert on error
-          set({ patients: originalPatients });
-          // Re-throw error to be handled by the component
-          throw error;
-        }
-      },
-
-      // Search and filter
-      setSearchQuery: (searchQuery) => set({ searchQuery }),
-      setSelectedFilter: (selectedFilter) => set({ selectedFilter }),
-      
-      getFilteredPatients: () => {
-        const { patients, searchQuery, selectedFilter } = get();
-        let filtered = patients;
-
-        // Apply search filter
-        if (searchQuery.trim()) {
-          filtered = filtered.filter(patient =>
-            patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            patient.patient_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            patient.phone.includes(searchQuery) ||
-            patient.email.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-        }
-
-        // Apply category filter
-        if (selectedFilter !== 'all') {
-          if (selectedFilter === 'favorites') {
-            filtered = filtered.filter(patient => patient.is_favorite);
-          } else if (selectedFilter === 'offline') {
-            filtered = filtered.filter(patient => patient._needs_sync);
-          } else {
-            filtered = filtered.filter(patient => patient.group === selectedFilter);
-          }
-        }
-
-        return filtered;
-      },
+      // Search and filter actions
+      setSearchQuery: (query) => set({ searchQuery: query }),
+      setSelectedFilter: (filter) => set({ selectedFilter: filter }),
 
       // Granular loading state actions
       setLoading: (key, loading) => {
@@ -342,22 +165,6 @@ export const useAppStore = create<AppState>()(
       updateSettings: (newSettings) => {
         const settings = { ...get().settings, ...newSettings };
         set({ settings });
-      },
-
-      // Offline queue
-      addToOfflineQueue: (action) => {
-        const offlineQueue = [...get().offlineQueue, action];
-        set({ offlineQueue });
-      },
-      
-      clearOfflineQueue: () => set({ offlineQueue: [] }),
-      
-      markPatientForSync: (id) => {
-        get().updatePatient(id, { _needs_sync: true });
-      },
-      
-      getPatientsNeedingSync: () => {
-        return get().patients.filter(p => p._needs_sync);
       },
 
       // Convenience getters
@@ -390,10 +197,11 @@ export const useAppStore = create<AppState>()(
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         user: state.user,
-        patients: state.patients,
         settings: state.settings,
-        offlineQueue: state.offlineQueue,
-        lastSyncTime: state.lastSyncTime
+        lastSyncTime: state.lastSyncTime,
+        searchQuery: state.searchQuery,
+        selectedFilter: state.selectedFilter,
+        isOffline: state.isOffline,
       }),
     }
   )
