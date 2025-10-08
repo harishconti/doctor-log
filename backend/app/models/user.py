@@ -13,7 +13,7 @@ class User(BaseModel):
     full_name: str
     medical_specialty: Optional[str] = "general"
     plan: UserPlan = UserPlan.BASIC
-    role: UserRole = UserRole.PATIENT
+    role: UserRole = UserRole.DOCTOR
     subscription_status: SubscriptionStatus = SubscriptionStatus.TRIALING
     subscription_end_date: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(days=90))
     created_at: datetime = Field(default_factory=datetime.utcnow)

@@ -18,6 +18,9 @@ This document outlines the development status and future roadmap for all compone
 - **Payment Integration:**
   - [x] A dedicated "Upgrade" screen outlines Pro plan benefits.
   - [x] The checkout flow is implemented, calling the backend to create a secure checkout session.
+- **Data & Validation:**
+  - [x] **Offline Support:** Implemented robust offline data management with WatermelonDB.
+  - [x] **Input Validation:** Added comprehensive client-side validation to all user input fields.
 
 ### ⏳ Pending Features
 
@@ -25,8 +28,6 @@ This document outlines the development status and future roadmap for all compone
   - [ ] Implement the document upload UI on the patient detail screen.
   - [ ] Implement a view to list, download, and manage a patient's uploaded documents.
 - **General Improvements:**
-  - [ ] **Offline Support:** Implement robust offline data management (e.g., using WatermelonDB or Realm) to ensure the app is usable without a constant internet connection.
-  - [x] **Input Validation:** Add comprehensive client-side validation to all user input fields.
   - [ ] **UI/UX:** Add haptic feedback and more advanced loading states.
 
 ---
