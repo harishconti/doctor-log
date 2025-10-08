@@ -24,8 +24,8 @@ This document outlines the development status and future roadmap for all compone
 
 ### ⏳ Pending Features
 
-- **Document Management (Pro Feature):**
-  - [ ] Implement the document upload UI on the patient detail screen.
+- **Document Management (Pro Feature):** *(Depends on: Backend Image Storage)*
+  - [ ] Implement the document upload UI on the patient detail screen. 
   - [ ] Implement a view to list, download, and manage a patient's uploaded documents.
 - **General Improvements:**
   - [ ] **UI/UX:** Add haptic feedback and more advanced loading states.
@@ -45,7 +45,7 @@ This is a new, Pro-exclusive application to be built from scratch.
 - **Feature Development:**
   - [ ] **Analytics Dashboard:** Develop components to visualize key practice metrics from the `/api/analytics` endpoints.
   - [ ] **Advanced Patient Management:** Build a comprehensive data grid (e.g., MUI X, AG Grid) for searching, sorting, and filtering patients.
-  - [ ] **Appointment Calendar:** Implement a full-featured calendar for appointment management using a library like FullCalendar.
+  - [ ] **Appointment Calendar:** Implement a full-featured calendar for appointment management using a library like FullCalendar. *(Depends on: Backend Appointments API)*
 
 ---
 
