@@ -142,7 +142,7 @@ Stores metadata about files uploaded by Pro users. The files themselves are stor
 This section outlines key user journeys.
 
 ### 5.1. User Registration & Trial Activation
-A new user is registered and automatically placed on a 90-day trial with a default role.
+A new user is registered and automatically placed on a 90-day trial with a default role of `DOCTOR`.
 ```mermaid
 sequenceDiagram
     participant Client as Mobile App
@@ -150,7 +150,7 @@ sequenceDiagram
     participant DB as MongoDB
     Client->>Server: 1. POST /api/auth/register (full_name, email, password)
     Server->>Server: 2. Validate input & hash password
-    Server->>DB: 3. INSERT INTO users (plan: 'basic', role: 'patient', status: 'trialing', trial_ends_at: NOW() + 90 days)
+    Server->>DB: 3. INSERT INTO users (plan: 'basic', role: 'doctor', status: 'trialing', trial_ends_at: NOW() + 90 days)
     DB-->>Server: 4. Return created user document
     Server->>Server: 5. Generate JWT (containing user_id, plan, role)
     Server-->>Client: 6. 201 Created (user data + JWT)
