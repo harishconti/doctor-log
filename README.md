@@ -51,7 +51,7 @@ The application is built with a modern, modular architecture designed for scalab
 - **Authentication:** JWT, passlib, python-jose
 - **Data Validation:** Pydantic
 - **Async Support:** `motor` for non-blocking database calls
-- **Frontend (Mobile):** React Native, Expo, Zustand
+- **Frontend (Mobile):** React Native, Expo, Zustand, WatermelonDB
 - **Frontend (Web):** React.js (Planned)
 
 ## 🚀 Getting Started
@@ -140,8 +140,8 @@ You can use the following demo accounts to test the application.
 This project has evolved from a basic application with placeholder functionality into a feature-complete patient management system.
 
 ### Key Milestones Achieved
-- **Full Patient CRUD:** Complete implementation of patient creation, editing, and management screens.
-- **Robust Authentication:** Secure, cross-platform JWT authentication.
-- **Phone Integration:** Google Contacts-style integration for direct calling, SMS, and caller ID.
+- **Robust Authentication:** Secure, cross-platform JWT authentication with fixed state hydration.
+- **Offline-First Data Layer:** Implemented WatermelonDB for offline data management.
 - **Code Quality:** Significant improvements in state management (Zustand), error handling, and component reusability.
 - **UI/UX:** Added dark mode, skeleton loaders, and optimistic UI updates for a more responsive feel.
+- **Backend Stability:** Hardened the backend with RBAC, rate limiting, and improved validation.

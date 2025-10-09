@@ -78,9 +78,9 @@ Stores information about the medical professionals using the service.
   "full_name": "String",
   "phone": "String",
   "medical_specialty": "String",
-  "plan": "String (Enum: 'basic', 'pro')",
-  "role": "String (Enum: 'admin', 'doctor', 'patient')",
-  "subscription_status": "String (Enum: 'trialing', 'active', 'canceled', 'past_due')",
+  "plan": "String (Enum: 'basic', 'pro', Default: 'basic')",
+  "role": "String (Enum: 'admin', 'doctor', 'patient', Default: 'doctor')",
+  "subscription_status": "String (Enum: 'trialing', 'active', 'canceled', 'past_due', Default: 'trialing')",
   "subscription_end_date": "ISODate",
   "created_at": "ISODate",
   "updated_at": "ISODate"
