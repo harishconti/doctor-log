@@ -11,6 +11,7 @@ This document outlines the development status and future roadmap for all compone
 - **Core Subscription & Auth:**
   - [x] Enhanced global state (Zustand) to store user's subscription plan, status, and trial end date.
   - [x] Login process correctly populates subscription state from the backend.
+  - [x] Fixed critical state hydration issue, ensuring the app loads correctly.
 - **Conditional UI:**
   - [x] Profile screen displays the user's current plan and trial status.
   - [x] Pro-level features are visually locked for Basic/Trial users.
@@ -18,12 +19,13 @@ This document outlines the development status and future roadmap for all compone
 - **Payment Integration:**
   - [x] A dedicated "Upgrade" screen outlines Pro plan benefits.
   - [x] The checkout flow is implemented, calling the backend to create a secure checkout session.
-- **Data & Validation:**
-  - [x] **Offline Support:** Implemented robust offline data management with WatermelonDB.
-  - [x] **Input Validation:** Added comprehensive client-side validation to all user input fields.
+- **Data Layer:**
+  - [x] **Offline Support:** Initial WatermelonDB setup is complete and configured correctly for web builds. *(Note: Full functionality is blocked by the missing backend sync API).*
 
 ### ⏳ Pending Features
 
+- **Core Functionality:**
+    - [ ] **Input Validation:** The Zod validation schema for patients (`patientSchema`) is missing, preventing the creation and editing of patients.
 - **Document Management (Pro Feature):** *(Depends on: Backend Image Storage)*
   - [ ] Implement the document upload UI on the patient detail screen. 
   - [ ] Implement a view to list, download, and manage a patient's uploaded documents.
@@ -62,13 +64,14 @@ This is a new, Pro-exclusive application to be built from scratch.
 - **Pro-Tier APIs:**
   - [x] API endpoints for `Documents` and `Analytics` are implemented and protected.
 - **Security & Stability:**
-  - [x] **RBAC:** Finalized and polished Role-Based Access Control with `ADMIN`, `DOCTOR`, and `PATIENT` roles.
+  - [x] **RBAC:** Finalized and polished Role-Based Access Control. New users are correctly assigned the `DOCTOR` role.
   - [x] **Rate Limiting:** Implemented rate limiting across all major API endpoints.
   - [x] **Server-Side Validation:** Enhanced validation for patient and clinical note data.
 
 ### ⏳ Pending Features
 
 - **Core Functionality:**
+  - [ ] **Data Synchronization API:** Implement `/api/sync/pull` and `/api/sync/push` endpoints required by the frontend's WatermelonDB client.
   - [ ] **Appointments:** Develop API endpoints for appointment management.
   - [ ] **Image Storage:** Integrate with a cloud storage service (e.g., AWS S3, Cloudinary) for document files.
 
