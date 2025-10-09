@@ -319,14 +319,18 @@ const enhance = withObservables(['searchQuery', 'selectedFilter'], ({ searchQuer
   };
 });
 
+// Create the enhanced component *outside* of the render function
+const EnhancedIndex = enhance(Index);
+
 const IndexContainer = () => {
+  // Pull the props from the Zustand store
   const { searchQuery, selectedFilter } = useAppStore(
     (state) => ({ searchQuery: state.searchQuery, selectedFilter: state.selectedFilter }),
-    // Replace with shallow for better performance if comparing objects
+    // Using shallow compare is better for performance when selecting multiple values
   );
 
-  const EnhancedIndex = enhance({ searchQuery, selectedFilter });
-  return <EnhancedIndex />;
+  // Render the enhanced component, passing the reactive props to it
+  return <EnhancedIndex searchQuery={searchQuery} selectedFilter={selectedFilter} />;
 };
 
 export default IndexContainer;
