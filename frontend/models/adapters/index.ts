@@ -6,7 +6,7 @@ const adapter = new LokiJSAdapter({
   schema: mySchema,
   migrations,
   useWebWorker: false,
-  useIncrementalIndexedDB: true, // Corrected option
+  useIncrementalIndexedDB: true,
   onSetUpError: (error) => {
     console.error('Failed to load database', error);
   },
