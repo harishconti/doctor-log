@@ -1,7 +1,7 @@
 from app.db.session import UserCollection
 from app.schemas.user import UserCreate, UserLogin, UserPlan, SubscriptionStatus
-from app.core.security import hash_password, verify_password
-from app.models.user import User  # Corrected import
+from app.core.hashing import get_password_hash, verify_password
+from app.models.user import User
 from bson import ObjectId
 from typing import Optional
 import uuid
@@ -16,7 +16,7 @@ async def create_user(user_data: UserCreate) -> User:
         raise ValueError("Email already registered")
 
     user_dict = user_data.dict()
-    user_dict["password_hash"] = hash_password(user_dict.pop("password"))
+    user_dict["password_hash"] = get_password_hash(user_dict.pop("password"))
 
     # Create a User model instance for the database.
     # Pydantic will apply the default values for id, plan, subscription_status,
@@ -43,6 +43,15 @@ async def get_user_by_id(user_id: str) -> User | None:
     Retrieves a user by their ID.
     """
     user_from_db = await UserCollection.find_one({"id": user_id})
+    if user_from_db:
+        return User(**user_from_db)
+    return None
+
+async def get_user_by_email(email: str) -> User | None:
+    """
+    Retrieves a user by their email.
+    """
+    user_from_db = await UserCollection.find_one({"email": email})
     if user_from_db:
         return User(**user_from_db)
     return None

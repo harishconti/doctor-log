@@ -1,6 +1,5 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from typing import Optional, List
 import jwt
@@ -8,22 +7,21 @@ import jwt
 from app.core.config import settings
 from app.schemas.user import UserPlan
 from app.schemas.role import UserRole
-
-# --- CryptContext for Password Hashing ---
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from app.core.hashing import verify_password
+from app.services import user_service
+from app.models.user import User
 
 # --- JWT Bearer Scheme ---
 # We instantiate it once and reuse it in our dependency
 reusable_oauth2 = HTTPBearer()
 
-# --- Password Hashing ---
-def hash_password(password: str) -> str:
-    """Hashes a plain-text password."""
-    return pwd_context.hash(password)
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verifies a plain-text password against a hashed one."""
-    return pwd_context.verify(plain_password, hashed_password)
+async def authenticate_user(email: str, password: str) -> User | None:
+    user = await user_service.get_user_by_email(email=email)
+    if not user:
+        return None
+    if not verify_password(password, user.password_hash):
+        return None
+    return user
 
 # --- JWT Token Creation ---
 def create_access_token(subject: str, plan: str, role: str, expires_delta: Optional[timedelta] = None) -> str:
