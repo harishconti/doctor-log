@@ -32,6 +32,16 @@ export interface CreateNoteRequest {
   visit_type?: 'regular' | 'follow-up' | 'emergency';
 }
 
+export interface UpdateNoteRequest {
+  content?: string;
+  visit_type?: 'regular' | 'follow-up' | 'emergency';
+}
+
+export interface GetNotesParams {
+  page?: number;
+  page_size?: number;
+}
+
 export const patientsApi = {
   /**
    * Get paginated list of patients with optional filters
@@ -112,10 +122,18 @@ export const patientsApi = {
   },
 
   /**
-   * Get clinical notes for a patient
+   * Get paginated clinical notes for a patient
    */
-  getNotes: async (patientId: string): Promise<ClinicalNote[]> => {
-    const response = await apiClient.get<ClinicalNote[]>(`/patients/${patientId}/notes`);
+  getNotes: async (patientId: string, params: GetNotesParams = {}): Promise<PaginatedResponse<ClinicalNote>> => {
+    const queryParams = new URLSearchParams();
+
+    if (params.page) queryParams.append('page', String(params.page));
+    if (params.page_size) queryParams.append('page_size', String(params.page_size));
+
+    const queryString = queryParams.toString();
+    const url = `/patients/${patientId}/notes${queryString ? `?${queryString}` : ''}`;
+
+    const response = await apiClient.get<PaginatedResponse<ClinicalNote>>(url);
     return response.data;
   },
 
@@ -125,6 +143,21 @@ export const patientsApi = {
   createNote: async (patientId: string, data: CreateNoteRequest): Promise<ClinicalNote> => {
     const response = await apiClient.post<ClinicalNote>(`/patients/${patientId}/notes`, data);
     return response.data;
+  },
+
+  /**
+   * Update an existing clinical note
+   */
+  updateNote: async (patientId: string, noteId: string, data: UpdateNoteRequest): Promise<ClinicalNote> => {
+    const response = await apiClient.put<ClinicalNote>(`/patients/${patientId}/notes/${noteId}`, data);
+    return response.data;
+  },
+
+  /**
+   * Delete a clinical note
+   */
+  deleteNote: async (patientId: string, noteId: string): Promise<void> => {
+    await apiClient.delete(`/patients/${patientId}/notes/${noteId}`);
   },
 
   /**
