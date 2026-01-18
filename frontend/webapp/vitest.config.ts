@@ -15,7 +15,7 @@ export default defineConfig({
     setupFiles: ['./test/setup.ts'],
     css: true,
     include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    exclude: ['node_modules', 'dist'],
+    exclude: ['node_modules', 'dist', '**/e2e.spec.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
