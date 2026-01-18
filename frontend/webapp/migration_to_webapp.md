@@ -612,6 +612,7 @@ export interface PaginatedResponse<T> { ... }
 | `api/user.ts` | User profile API functions | ✅ Created |
 | `api/index.ts` | Export all API modules | ✅ Created |
 | `store/authStore.ts` | Zustand auth state management | ✅ Created |
+| `store/themeStore.ts` | Theme persistence with localStorage | ✅ Created |
 | `utils/logger.ts` | Console logging utility | ✅ Created |
 
 ### Authentication Files (Fully Integrated)
@@ -689,14 +690,15 @@ export interface PaginatedResponse<T> { ... }
 ### Phase 4: Analytics & Profile ✅ COMPLETED
 13. ✅ Analytics API integration (AnalyticsPage.tsx updated)
 14. ✅ Profile page with user data (ProfilePage.tsx uses auth store)
-15. ⚠️ Edit profile functionality (UI exists, API module ready)
+15. ✅ Edit profile functionality (Edit Profile Modal with API + photo upload)
 16. ✅ Change password functionality (ProfilePage + SettingsPage)
 
-### Phase 5: Settings & Polish (NEXT PRIORITY)
-17. ⚠️ Settings persistence (auth store used for email, password change works)
-18. ❌ Theme persistence (localStorage)
-19. ❌ Notification preferences (backend support needed)
+### Phase 5: Settings & Polish ✅ COMPLETED
+17. ✅ Settings persistence (auth store used for email, password change works)
+18. ✅ Theme persistence (localStorage with Zustand persist middleware)
+19. ✅ Notification preferences (API integration with save functionality)
 20. ✅ Loading states (added to all pages)
+21. ✅ Edit Profile Modal (full API integration with photo upload)
 
 ---
 
@@ -715,9 +717,10 @@ export interface PaginatedResponse<T> { ... }
 | Patient Edit | Partial | Full | Update endpoint ready |
 | Clinical Notes | API Ready | Full | API module created |
 | Analytics | ✅ Full API | Full API | Fully integrated with date range |
-| Profile | ✅ Auth Store | Full API | User data from auth store |
+| Profile | ✅ Full API | Full API | Edit modal with photo upload |
 | Change Password | ✅ Full API | Full | Works in Profile & Settings |
-| Settings | ✅ Auth + API | Partial | Email from store, password API |
+| Settings | ✅ Full API | Partial | Theme, notifications with API |
+| Theme Persistence | ✅ localStorage | N/A | Light/Dark/System support |
 | AI Summary | ✅ Gemini | N/A | Already functional |
 
 ---
@@ -811,6 +814,7 @@ The webapp has a solid UI foundation matching the web-dashboard design.
 - ✅ `lib/client.ts` - Axios client with token refresh and mutex pattern
 - ✅ `lib/auth.ts` - Auth API module with all endpoints
 - ✅ `store/authStore.ts` - Zustand state management
+- ✅ `store/themeStore.ts` - Theme persistence with localStorage (light/dark/system)
 - ✅ `geminiService.ts` - AI-powered patient summaries (functional)
 - ✅ `api/patients.ts` - Patients API module with full CRUD operations
 - ✅ `api/user.ts` - User profile API module
@@ -819,16 +823,16 @@ The webapp has a solid UI foundation matching the web-dashboard design.
 - ✅ `PatientsPage.tsx` - Full API integration with search, pagination, and filters
 - ✅ `RegisterPatientPage.tsx` - Full API integration with validation
 - ✅ `AnalyticsPage.tsx` - Full API integration with date range, export, loading states
-- ✅ `ProfilePage.tsx` - Auth store integration with change password modal
-- ✅ `SettingsPage.tsx` - Auth store for email, change password with API
+- ✅ `ProfilePage.tsx` - Auth store integration, edit profile modal, change password modal
+- ✅ `SettingsPage.tsx` - Theme persistence, notification API, change password
 
 ### Remaining Work
 
-1. **Edit Profile Modal**: Add modal to edit profile fields (UI exists, API module ready)
-2. **Theme Persistence**: Save theme preference to localStorage
-3. **Notification Preferences**: Backend API support needed
+1. ✅ **Edit Profile Modal**: Full modal with API integration and photo upload
+2. ✅ **Theme Persistence**: Theme store with localStorage persistence (light/dark/system)
+3. ✅ **Notification Preferences**: API integration with save functionality
 4. **Optional**: Google/Microsoft OAuth (UI exists, needs backend support)
 
-The authentication, patient management, analytics, and profile flows are now fully functional with production-ready error handling and security practices.
+All core features are now fully functional with production-ready error handling and security practices.
 
-**Updated Scope**: Auth, Patient Management, Analytics & Profile phases complete. Next phase: Settings polish and theme persistence.
+**Updated Scope**: All 5 phases complete. The webapp is now feature-complete for the migration from web-dashboard.
