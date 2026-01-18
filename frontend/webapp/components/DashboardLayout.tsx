@@ -4,7 +4,9 @@ import {
   Menu,
   X,
   ChevronDown,
-  LogOut
+  LogOut,
+  Crown,
+  Zap
 } from 'lucide-react';
 import { ViewState, User } from '../types';
 
@@ -72,8 +74,27 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             </button>
             
             <div className="flex items-center gap-4 pl-6 border-l border-gray-100 h-10">
+              {/* Upgrade button for Basic users */}
+              {user?.plan === 'basic' && (
+                <button
+                  onClick={() => onChangeView(ViewState.UPGRADE)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-400 to-yellow-400 text-gray-900 text-xs font-bold rounded-lg hover:shadow-md hover:shadow-amber-200 transition-all"
+                >
+                  <Zap size={14} />
+                  Upgrade
+                </button>
+              )}
+
               <div className="text-right hidden lg:block leading-tight">
-                <p className="text-sm font-bold text-gray-900">{user?.full_name || 'Doctor'}</p>
+                <div className="flex items-center gap-2 justify-end">
+                  <p className="text-sm font-bold text-gray-900">{user?.full_name || 'Doctor'}</p>
+                  {user?.plan === 'pro' && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700 text-[10px] font-bold rounded">
+                      <Crown size={10} />
+                      PRO
+                    </span>
+                  )}
+                </div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{user?.medical_specialty || user?.role || 'Medical Professional'}</p>
               </div>
               <div className="relative">
@@ -113,11 +134,30 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-gray-100 bg-white absolute w-full shadow-lg">
             <div className="p-4 space-y-2">
+              {/* Mobile Pro badge */}
+              {user?.plan === 'pro' && (
+                <div className="px-4 py-2 mb-2">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700 text-xs font-bold rounded-lg">
+                    <Crown size={12} />
+                    PRO MEMBER
+                  </span>
+                </div>
+              )}
               <button onClick={() => onChangeView(ViewState.DASHBOARD)} className="block w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-600 font-medium">Dashboard</button>
               <button onClick={() => onChangeView(ViewState.PATIENTS)} className="block w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-600 font-medium">Patients</button>
               <button onClick={() => onChangeView(ViewState.ANALYTICS)} className="block w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-600 font-medium">Analytics</button>
               <button onClick={() => onChangeView(ViewState.PROFILE)} className="block w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-600 font-medium">Profile</button>
               <button onClick={() => onChangeView(ViewState.SETTINGS)} className="block w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-600 font-medium">Settings</button>
+              {/* Mobile Upgrade button for Basic users */}
+              {user?.plan === 'basic' && (
+                <button
+                  onClick={() => onChangeView(ViewState.UPGRADE)}
+                  className="flex items-center gap-2 w-full text-left px-4 py-3 rounded-lg bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-700 font-bold"
+                >
+                  <Zap size={18} />
+                  Upgrade to Pro
+                </button>
+              )}
               <div className="border-t border-gray-100 pt-4 mt-2">
                  <button onClick={onLogout} className="text-red-600 font-medium px-4 py-2 w-full text-left">Sign Out</button>
               </div>

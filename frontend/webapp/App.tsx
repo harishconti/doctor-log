@@ -13,6 +13,7 @@ import EditPatientPage from './components/EditPatientPage';
 import AnalyticsPage from './components/AnalyticsPage';
 import ProfilePage from './components/ProfilePage';
 import SettingsPage from './components/SettingsPage';
+import UpgradePage from './components/UpgradePage';
 import { ViewState, Patient } from './types';
 import { MOCK_PATIENTS } from './constants';
 import { useAuthStore } from './store/authStore';
@@ -500,6 +501,15 @@ const App: React.FC = () => {
           {currentView === ViewState.PROFILE && <ProfilePage />}
 
           {currentView === ViewState.SETTINGS && <SettingsPage />}
+
+          {currentView === ViewState.UPGRADE && (
+            <UpgradePage
+              onUpgradeSuccess={() => {
+                // After successful upgrade, could show a toast or refresh user data
+                console.log('Upgrade successful!');
+              }}
+            />
+          )}
 
           {currentView === ViewState.AI_SCRIBE && (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center">
