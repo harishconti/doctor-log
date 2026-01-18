@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   Shield,
@@ -19,9 +19,11 @@ import {
   ArrowRight,
   CheckCircle2,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Monitor
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { useThemeStore, Theme } from '../store/themeStore';
 import { userApi } from '../api';
 import { logger } from '../utils/logger';
 
@@ -52,6 +54,7 @@ const SectionHeader = ({ icon: Icon, title, description, bgClass, iconColor }: a
 
 const SettingsPage = () => {
   const { user } = useAuthStore();
+  const { theme, setTheme } = useThemeStore();
   const [activeTab, setActiveTab] = useState('Billing');
 
   // General Settings State
@@ -61,7 +64,9 @@ const SettingsPage = () => {
     critical: true
   });
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
-  const [theme, setTheme] = useState('light');
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false);
+  const [notificationSaveSuccess, setNotificationSaveSuccess] = useState(false);
+  const [notificationSaveError, setNotificationSaveError] = useState<string | null>(null);
 
   // Password Change State
   const [currentPassword, setCurrentPassword] = useState('');
@@ -111,6 +116,31 @@ const SettingsPage = () => {
     } finally {
       setIsChangingPassword(false);
     }
+  };
+
+  // Handle saving notification preferences
+  const handleSaveNotifications = async () => {
+    setNotificationSaveError(null);
+    setIsSavingNotifications(true);
+    try {
+      await userApi.updateNotificationPreferences({
+        email_notifications: notifications.email,
+        desktop_notifications: notifications.desktop,
+        critical_alerts: notifications.critical,
+      });
+      setNotificationSaveSuccess(true);
+      setTimeout(() => setNotificationSaveSuccess(false), 3000);
+    } catch (err: any) {
+      logger.error('Failed to save notification preferences', err);
+      setNotificationSaveError('Failed to save preferences. Please try again.');
+    } finally {
+      setIsSavingNotifications(false);
+    }
+  };
+
+  // Handle theme change
+  const handleThemeChange = (newTheme: Theme) => {
+    setTheme(newTheme);
   };
 
   const renderGeneralSettings = () => (
@@ -240,13 +270,26 @@ const SettingsPage = () => {
 
       {/* Notifications */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
-          <SectionHeader 
-              icon={Bell} 
-              title="Notifications" 
+          <SectionHeader
+              icon={Bell}
+              title="Notifications"
               description="Manage how you receive alerts"
               bgClass="bg-orange-50"
               iconColor="text-orange-600"
           />
+
+          {notificationSaveSuccess && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2">
+              <CheckCircle2 className="text-green-500" size={16} />
+              <span className="text-green-700 text-sm font-medium">Notification preferences saved!</span>
+            </div>
+          )}
+          {notificationSaveError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+              <AlertCircle className="text-red-500" size={16} />
+              <span className="text-red-700 text-sm font-medium">{notificationSaveError}</span>
+            </div>
+          )}
 
           <div className="space-y-4">
               <div className="flex items-center justify-between py-2">
@@ -269,7 +312,7 @@ const SettingsPage = () => {
                       <p className="text-xs text-gray-500 mt-0.5">Immediate notifications for critical status changes.</p>
                   </div>
                    {/* Custom red toggle for Critical Alerts */}
-                   <button 
+                   <button
                       onClick={() => setNotifications({...notifications, critical: !notifications.critical})}
                       className={`w-12 h-6 rounded-full transition-colors relative ${notifications.critical ? 'bg-red-500' : 'bg-gray-200'}`}
                   >
@@ -277,13 +320,24 @@ const SettingsPage = () => {
                   </button>
               </div>
           </div>
+
+          <div className="flex justify-end mt-6 pt-4 border-t border-gray-100">
+            <button
+              onClick={handleSaveNotifications}
+              disabled={isSavingNotifications}
+              className="px-4 py-2 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              {isSavingNotifications && <Loader2 size={14} className="animate-spin" />}
+              {isSavingNotifications ? 'Saving...' : 'Save Preferences'}
+            </button>
+          </div>
       </div>
 
       {/* App Preferences */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
-          <SectionHeader 
-              icon={Sliders} 
-              title="App Preferences" 
+          <SectionHeader
+              icon={Sliders}
+              title="App Preferences"
               description="Customize your workspace"
               bgClass="bg-purple-50"
               iconColor="text-purple-600"
@@ -293,19 +347,28 @@ const SettingsPage = () => {
               <div>
                   <label className="block text-sm font-bold text-gray-900 mb-3">Interface Theme</label>
                   <div className="flex p-1 bg-gray-100 rounded-xl">
-                      <button 
-                          onClick={() => setTheme('light')}
+                      <button
+                          onClick={() => handleThemeChange('light')}
                           className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${theme === 'light' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500'}`}
                       >
                           <Sun size={16} /> Light
                       </button>
-                       <button 
-                          onClick={() => setTheme('dark')}
+                      <button
+                          onClick={() => handleThemeChange('dark')}
                           className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${theme === 'dark' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
                       >
                           <Moon size={16} /> Dark
                       </button>
+                      <button
+                          onClick={() => handleThemeChange('system')}
+                          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${theme === 'system' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500'}`}
+                      >
+                          <Monitor size={16} /> System
+                      </button>
                   </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {theme === 'system' ? 'Theme follows your system preference' : `Current theme: ${theme}`}
+                  </p>
               </div>
               <div>
                   <label className="block text-sm font-bold text-gray-900 mb-3">Data Refresh Interval</label>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   User,
   Mail,
@@ -18,10 +18,11 @@ import {
   Users,
   X,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Camera
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import { userApi, ChangePasswordRequest } from '../api';
+import { userApi, ChangePasswordRequest, UpdateProfileRequest } from '../api';
 import { logger } from '../utils/logger';
 
 const ActivityItem = ({ type, patient, date, status, icon: Icon, iconColor, bgColor }: {
@@ -217,9 +218,256 @@ const ChangePasswordModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: ()
   );
 };
 
+// Edit Profile Modal Component
+interface EditProfileModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  currentUser: {
+    full_name: string;
+    phone?: string;
+    medical_specialty?: string;
+    profile_photo?: string;
+  };
+  onUpdate: (updates: Partial<{ full_name: string; phone: string; medical_specialty: string; profile_photo: string }>) => void;
+}
+
+const EditProfileModal = ({ isOpen, onClose, currentUser, onUpdate }: EditProfileModalProps) => {
+  const [fullName, setFullName] = useState(currentUser.full_name || '');
+  const [phone, setPhone] = useState(currentUser.phone || '');
+  const [specialty, setSpecialty] = useState(currentUser.medical_specialty || '');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [previewPhoto, setPreviewPhoto] = useState<string | null>(currentUser.profile_photo || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB');
+      return;
+    }
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewPhoto(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload photo
+    setIsUploadingPhoto(true);
+    setError(null);
+    try {
+      const result = await userApi.uploadProfilePhoto(file);
+      setPreviewPhoto(result.photo_url);
+      onUpdate({ profile_photo: result.photo_url });
+    } catch (err: any) {
+      logger.error('Failed to upload photo', err);
+      setError('Failed to upload photo. Please try again.');
+      setPreviewPhoto(currentUser.profile_photo || null);
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!fullName.trim()) {
+      setError('Full name is required');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const data: UpdateProfileRequest = {
+        full_name: fullName.trim(),
+        phone: phone.trim() || undefined,
+        medical_specialty: specialty.trim() || undefined,
+      };
+      const updatedUser = await userApi.updateProfile(data);
+      onUpdate({
+        full_name: updatedUser.full_name,
+        phone: updatedUser.phone,
+        medical_specialty: updatedUser.medical_specialty,
+      });
+      setSuccess(true);
+      setTimeout(() => {
+        onClose();
+        setSuccess(false);
+      }, 1500);
+    } catch (err: any) {
+      logger.error('Failed to update profile', err);
+      if (err.response?.status === 422) {
+        setError('Invalid data provided. Please check your inputs.');
+      } else {
+        setError('Failed to update profile. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  const userInitial = fullName.charAt(0).toUpperCase() || 'U';
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md p-6 animate-fadeIn max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-bold text-gray-900">Edit Profile</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X size={20} />
+          </button>
+        </div>
+
+        {success ? (
+          <div className="text-center py-8">
+            <CheckCircle2 className="mx-auto text-green-500 mb-4" size={48} />
+            <p className="text-gray-900 font-bold">Profile updated successfully!</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+                <AlertCircle className="text-red-500 shrink-0" size={16} />
+                <span className="text-red-700 text-sm font-medium">{error}</span>
+              </div>
+            )}
+
+            {/* Profile Photo */}
+            <div className="flex flex-col items-center">
+              <div className="relative">
+                {previewPhoto ? (
+                  <img
+                    src={previewPhoto}
+                    alt="Profile"
+                    className="w-24 h-24 rounded-full border-4 border-gray-100 shadow-md object-cover"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full border-4 border-gray-100 shadow-md bg-brand-100 flex items-center justify-center text-brand-600 font-bold text-3xl">
+                    {userInitial}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingPhoto}
+                  className="absolute bottom-0 right-0 bg-brand-600 text-white p-2 rounded-full border-2 border-white hover:bg-brand-700 transition-colors disabled:opacity-50"
+                >
+                  {isUploadingPhoto ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Camera size={16} />
+                  )}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">Click to change photo (max 5MB)</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-900 mb-2">Full Name *</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  placeholder="Enter your full name"
+                />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-900 mb-2">Phone Number</label>
+              <div className="relative">
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  placeholder="Enter your phone number"
+                />
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-900 mb-2">Medical Specialty</label>
+              <select
+                value={specialty}
+                onChange={(e) => setSpecialty(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 bg-white"
+              >
+                <option value="">Select a specialty</option>
+                <option value="General Practice">General Practice</option>
+                <option value="Cardiology">Cardiology</option>
+                <option value="Dermatology">Dermatology</option>
+                <option value="Endocrinology">Endocrinology</option>
+                <option value="Gastroenterology">Gastroenterology</option>
+                <option value="Neurology">Neurology</option>
+                <option value="Oncology">Oncology</option>
+                <option value="Orthopedics">Orthopedics</option>
+                <option value="Pediatrics">Pediatrics</option>
+                <option value="Psychiatry">Psychiatry</option>
+                <option value="Pulmonology">Pulmonology</option>
+                <option value="Radiology">Radiology</option>
+                <option value="Surgery">Surgery</option>
+                <option value="Urology">Urology</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="flex-1 py-3 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isLoading && <Loader2 size={16} className="animate-spin" />}
+                {isLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const ProfilePage = () => {
-  const { user } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
 
   // User data from auth store with fallbacks
   const userName = user?.full_name || 'Doctor';
@@ -244,7 +492,10 @@ const ProfilePage = () => {
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">My Profile</h1>
           <p className="text-gray-500 mt-1">Manage your account settings and professional details.</p>
         </div>
-        <button className="flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-brand-600/20 transition-all active:scale-95">
+        <button
+          onClick={() => setIsEditProfileModalOpen(true)}
+          className="flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-brand-600/20 transition-all active:scale-95"
+        >
           <PenSquare size={16} />
           Edit Profile
         </button>
@@ -511,6 +762,21 @@ const ProfilePage = () => {
       <ChangePasswordModal
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
+      />
+
+      {/* Edit Profile Modal */}
+      <EditProfileModal
+        isOpen={isEditProfileModalOpen}
+        onClose={() => setIsEditProfileModalOpen(false)}
+        currentUser={{
+          full_name: userName,
+          phone: user?.phone,
+          medical_specialty: user?.medical_specialty,
+          profile_photo: user?.profile_photo,
+        }}
+        onUpdate={(updates) => {
+          updateUser(updates);
+        }}
       />
     </div>
   );
