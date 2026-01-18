@@ -1,24 +1,66 @@
 import React, { useState } from 'react';
-import { Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { authApi } from '../lib/auth';
+import type { AxiosError } from 'axios';
 
 interface ForgotPasswordScreenProps {
   onBackToLogin: () => void;
   onNavigateToReset?: () => void; // Optional for backward compatibility, but we'll use it
 }
 
+interface ApiErrorResponse {
+  detail?: string | { msg: string }[];
+}
+
 const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ onBackToLogin, onNavigateToReset }) => {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    if (!email.trim()) {
+      setError('Email is required');
+      return;
+    }
+
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+
+    try {
+      await authApi.forgotPassword(email.toLowerCase().trim());
+      // Always show success to prevent email enumeration
       setIsSubmitted(true);
-    }, 1500);
+    } catch (err) {
+      const axiosError = err as AxiosError<ApiErrorResponse>;
+
+      if (axiosError.response) {
+        const status = axiosError.response.status;
+        const data = axiosError.response.data;
+
+        if (status === 429) {
+          setError('Too many requests. Please wait before trying again.');
+        } else if (data?.detail) {
+          // Still show success for most cases to prevent enumeration
+          // Only show error for rate limiting
+          if (typeof data.detail === 'string' && data.detail.toLowerCase().includes('rate')) {
+            setError(data.detail);
+          } else {
+            // For security, show success even if email doesn't exist
+            setIsSubmitted(true);
+          }
+        } else {
+          // For security, show success even if there's an error
+          setIsSubmitted(true);
+        }
+      } else {
+        setError('Unable to connect to server. Please check your connection.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -76,6 +118,13 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ onBackToLog
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Reset your password</h2>
                 <p className="text-gray-500 text-sm">Enter your email and we'll send you reset instructions</p>
               </div>
+
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>

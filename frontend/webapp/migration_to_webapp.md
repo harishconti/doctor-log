@@ -2,7 +2,9 @@
 
 ## Executive Summary
 
-This report documents the required backend integrations to migrate from `web-dashboard` to `webapp` as the primary web application. The webapp currently has UI components with **mock implementations** that need real API integration to match the functionality of web-dashboard.
+This report documents the required backend integrations to migrate from `web-dashboard` to `webapp` as the primary web application.
+
+**Status Update (January 2026):** All authentication pages have been fully integrated with the backend API. The webapp now has real API integration for login, registration, email verification, forgot password, and password reset flows.
 
 ---
 
@@ -12,9 +14,10 @@ This report documents the required backend integrations to migrate from `web-das
 - **Location**: `frontend/webapp/`
 - **Framework**: React with Vite
 - **Styling**: TailwindCSS
-- **State**: Local React state (useState)
-- **API Integration**: None (all mock/simulated)
+- **State**: Zustand (authStore) for authentication, local React state for UI
+- **API Integration**: ✅ Full authentication flow integrated
 - **AI Features**: Gemini integration for patient summaries
+- **Auth**: ✅ JWT with token refresh, OTP verification (fully implemented)
 
 ### Web-Dashboard (Current Production)
 - **Location**: `frontend/web-dashboard/`
@@ -28,321 +31,207 @@ This report documents the required backend integrations to migrate from `web-das
 
 ## 1. Authentication Pages
 
-### 1.1 Login Screen
+### 1.1 Login Screen ✅ COMPLETED
 
 **File**: `components/LoginScreen.tsx`
 
-**Current State**: Mock implementation with simulated delay
-```typescript
-// Lines 16-24: Mock login
-const handleLogin = (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
-  setTimeout(() => {
-    setIsLoading(false);
-    onLogin();
-  }, 800);
-};
-```
+**Status**: ✅ Fully integrated with backend API
 
-**Required Changes**:
+**Implementation Details**:
+- Real API call using `authApi.login()` with OAuth2 form encoding
+- Proper error handling for 401 (invalid credentials), 403 (unverified email), 429 (rate limit)
+- Automatic redirect to OTP verification on 403
+- Token storage in sessionStorage via Zustand authStore
+- Email normalization (lowercase, trim)
+- Server connection error handling
 
-| Feature | Current | Required |
-|---------|---------|----------|
-| API Call | None | `POST /auth/login` (OAuth2 form) |
-| Email Validation | Optional | Required, case-insensitive |
-| Error Handling | None | Handle 401, 403 (unverified), 429 (lockout) |
-| Token Storage | None | Store access_token, refresh_token in sessionStorage |
-| Redirect on 403 | None | Redirect to OTP verification page |
-
-**Backend Endpoint**: `POST /api/auth/login`
-```typescript
-// Request: application/x-www-form-urlencoded
-// Body: { username: email, password: password }
-// Response: { access_token, refresh_token, token_type, user }
-```
-
-**New Features Needed**:
-- [ ] Input validation (email format, password required)
-- [ ] Error message display for invalid credentials
-- [ ] Account lockout notification (after 5 failed attempts)
-- [ ] Redirect to OTP page if email not verified
-- [ ] Remember email option (optional)
+**Implemented Features**:
+- [x] Input validation (email format, password required)
+- [x] Error message display for invalid credentials
+- [x] Account lockout notification (after 5 failed attempts - 429 handling)
+- [x] Redirect to OTP page if email not verified
+- [ ] Remember email option (optional - not implemented)
 - [ ] Google/Microsoft OAuth (UI exists but non-functional)
 
 ---
 
-### 1.2 Create Account Screen
+### 1.2 Create Account Screen ✅ COMPLETED
 
 **File**: `components/CreateAccountScreen.tsx`
 
-**Current State**: Mock implementation
-```typescript
-// Lines 17-27: Mock registration
-const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!agreed) return;
-  setIsLoading(true);
-  setTimeout(() => {
-    setIsLoading(false);
-    onCreateAccount();
-  }, 1000);
-};
-```
+**Status**: ✅ Fully integrated with backend API
 
-**Required Changes**:
+**Implementation Details**:
+- Real API call using `authApi.register()`
+- Full password strength validation with 5 requirements (12+ chars, uppercase, lowercase, digit, special char)
+- Visual strength indicator with color-coded bars
+- Proper error handling for 409 (email exists), 422 (validation)
+- Stores pending email for OTP verification
+- Server connection error handling
 
-| Feature | Current | Required |
-|---------|---------|----------|
-| API Call | None | `POST /auth/register` |
-| Fields | name, email, password | full_name, email, password, phone (opt), medical_specialty (opt) |
-| Password Requirements | None | 12+ chars, uppercase, lowercase, digit, special char |
-| Validation | Basic HTML5 | Zod/custom validation with strength indicator |
-| Post-Register Flow | Direct login | Redirect to OTP verification |
-
-**Backend Endpoint**: `POST /api/auth/register`
-```typescript
-// Request: application/json
-// Body: { email, password, full_name, phone?, medical_specialty? }
-// Response: { success, message, requires_verification, email }
-```
-
-**New Features Needed**:
-- [ ] Add phone number field (optional)
-- [ ] Add medical specialty dropdown (optional)
-- [ ] Password strength indicator (like web-dashboard)
-- [ ] Password requirements display (12+ chars, etc.)
-- [ ] Handle 409 Conflict (email already exists)
-- [ ] Redirect to OTP verification on success
+**Implemented Features**:
+- [ ] Add phone number field (optional - not implemented)
+- [ ] Add medical specialty dropdown (optional - not implemented)
+- [x] Password strength indicator (like web-dashboard)
+- [x] Password requirements display (12+ chars, etc.)
+- [x] Handle 409 Conflict (email already exists)
+- [x] Redirect to OTP verification on success
 - [ ] Google/Microsoft OAuth (UI exists but non-functional)
 
 ---
 
-### 1.3 Forgot Password Screen
+### 1.3 Forgot Password Screen ✅ COMPLETED
 
 **File**: `components/ForgotPasswordScreen.tsx`
 
-**Current State**: Mock implementation with success state
-```typescript
-// Lines 13-21: Mock forgot password
-const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
-  setTimeout(() => {
-    setIsLoading(false);
-    setIsSubmitted(true);
-  }, 1500);
-};
-```
+**Status**: ✅ Fully integrated with backend API
 
-**Required Changes**:
+**Implementation Details**:
+- Real API call using `authApi.forgotPassword()`
+- Shows success even on errors to prevent email enumeration (security best practice)
+- Rate limit error handling (429 status)
+- Email validation before submission
+- Server connection error handling
 
-| Feature | Current | Required |
-|---------|---------|----------|
-| API Call | None | `POST /auth/forgot-password` |
-| Response | Always success | Generic success (prevents email enumeration) |
-| Resend | UI only | Actual resend with cooldown |
-| Rate Limiting | None | 5/10min, 10/day per IP |
-
-**Backend Endpoint**: `POST /api/auth/forgot-password`
-```typescript
-// Request: application/json
-// Body: { email }
-// Response: { success, message } (always success to prevent enumeration)
-```
-
-**New Features Needed**:
-- [ ] API integration
-- [ ] Resend functionality with cooldown
-- [ ] Rate limit error handling
+**Implemented Features**:
+- [x] API integration
+- [x] Rate limit error handling (429)
+- [x] Security: Shows success to prevent email enumeration
+- [ ] Resend functionality with cooldown (using form resubmit)
 
 ---
 
-### 1.4 Email Verification Screen (OTP)
+### 1.4 Email Verification Screen (OTP) ✅ COMPLETED
 
 **File**: `components/VerifyEmailScreen.tsx`
 
-**Status**: ✅ UI Implemented (Mock)
+**Status**: ✅ Fully integrated with backend API
 
-**Current State**: Mock implementation with simulated verification
-```typescript
-// Lines 57-66: Mock OTP verification
-const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
-  if (otp.some(digit => digit === '')) return;
-  setIsLoading(true);
-  setTimeout(() => {
-    setIsLoading(false);
-    onVerify();
-  }, 1500);
-};
-```
+**Implementation Details**:
+- Real API calls using `authApi.verifyOtp()` and `authApi.resendOtp()`
+- 6-digit OTP input with auto-focus and auto-advance
+- Paste support for OTP codes
+- 60-second resend cooldown with countdown timer
+- Token storage on successful verification
+- Error handling for 400 (invalid/expired), 429 (rate limit)
+- Email masking display
 
 **Implemented Features**:
-- ✅ 6-digit OTP input with auto-focus
-- ✅ Numeric-only validation
-- ✅ Paste support for OTP codes
-- ✅ Auto-advance to next input on entry
-- ✅ Backspace navigation between inputs
-- ✅ Loading state animation
-- ✅ Resend button (UI only)
-
-**Required Changes**:
-
-| Feature | Current | Required |
-|---------|---------|----------|
-| API Call | None | `POST /api/auth/verify-otp` |
-| Resend OTP | UI only | `POST /api/auth/resend-otp` with cooldown |
-| Email Display | Not shown | Display email being verified |
-| Timer | None | 60-second cooldown for resend |
-| Error Handling | None | Handle invalid OTP, expired OTP |
-
-**Backend Endpoints**:
-- `POST /api/auth/verify-otp` - Verify OTP code
-- `POST /api/auth/resend-otp` - Resend OTP (60s cooldown)
-
-```typescript
-// verify-otp
-// Body: { email, otp_code }
-// Response: { success, message, access_token, refresh_token, user }
-
-// resend-otp
-// Body: { email }
-// Response: { success, message }
-```
-
-**New Features Needed**:
-- [ ] API integration for OTP verification
-- [ ] Resend functionality with 60s cooldown timer
-- [ ] Display email address being verified
-- [ ] Error handling for invalid/expired OTP
-- [ ] Rate limit error handling
+- [x] 6-digit OTP input with auto-focus
+- [x] Numeric-only validation
+- [x] Paste support for OTP codes
+- [x] Auto-advance to next input on entry
+- [x] Backspace navigation between inputs
+- [x] Loading state animation
+- [x] API integration for OTP verification
+- [x] Resend functionality with 60s cooldown timer
+- [x] Display email address being verified (masked)
+- [x] Error handling for invalid/expired OTP
+- [x] Rate limit error handling
 
 ---
 
-### 1.5 Reset Password Screen
+### 1.5 Reset Password Screen ✅ COMPLETED
 
 **File**: `components/ResetPasswordScreen.tsx`
 
-**Status**: ✅ UI Implemented (Mock)
+**Status**: ✅ Fully integrated with backend API
 
-**Current State**: Mock implementation with simulated password reset
-```typescript
-// Lines 16-28: Mock reset password
-const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
-  if (password !== confirmPassword) {
-    return;
-  }
-  setIsLoading(true);
-  setTimeout(() => {
-    setIsLoading(false);
-    onSubmit();
-  }, 1500);
-};
-```
+**Implementation Details**:
+- Real API call using `authApi.resetPassword()`
+- Full password strength validation with 5 requirements (same as registration)
+- Visual strength indicator with color-coded bars
+- Token extraction from URL query params or prop
+- Error handling for 400/404 (invalid/expired token), 429 (rate limit)
+- Success state with auto-redirect to login
+- Password match validation with visual feedback
 
 **Implemented Features**:
-- ✅ New password input with show/hide toggle
-- ✅ Confirm password input with show/hide toggle
-- ✅ Password match validation
-- ✅ Loading state animation
-- ✅ Back to login navigation
-
-**Required Changes**:
-
-| Feature | Current | Required |
-|---------|---------|----------|
-| API Call | None | `POST /api/auth/reset-password` |
-| Token from URL | None | Extract reset token from URL params |
-| Password Strength | None | Indicator with requirements display |
-| Validation | Basic match check | 12+ chars, uppercase, lowercase, digit, special char |
-| Error Handling | None | Handle invalid/expired token errors |
-
-**Backend Endpoint**: `POST /api/auth/reset-password`
-```typescript
-// Body: { token, new_password }
-// Response: { success, message }
-```
-
-**New Features Needed**:
-- [ ] API integration for password reset
-- [ ] Extract reset token from URL query parameters
-- [ ] Password strength indicator (like web-dashboard)
-- [ ] Password requirements display
-- [ ] Handle 400/404 for invalid/expired token
+- [x] New password input with show/hide toggle
+- [x] Confirm password input with show/hide toggle
+- [x] Password match validation with visual feedback
+- [x] Loading state animation
+- [x] Back to login navigation
+- [x] API integration for password reset
+- [x] Extract reset token from URL query parameters
+- [x] Password strength indicator (like web-dashboard)
+- [x] Password requirements display
+- [x] Handle 400/404 for invalid/expired token
+- [x] Success state with auto-redirect
 
 ---
 
-## 2. API Client Infrastructure (NEW)
+## 2. API Client Infrastructure ✅ COMPLETED
 
-### 2.1 API Client Module
+### 2.1 API Client Module ✅ COMPLETED
 
-**Status**: Does not exist in webapp
+**File**: `lib/client.ts`
 
-**Required**: Create `webapp/api/client.ts`
+**Status**: ✅ Fully implemented
 
-**Features Needed**:
-- [ ] Axios instance with base URL configuration
-- [ ] Request interceptor for Bearer token
-- [ ] Response interceptor for 401 handling
-- [ ] Automatic token refresh with mutex pattern
-- [ ] Token manager utility (get/set/clear/validate)
-- [ ] sessionStorage for token persistence
-
-**Reference**: `web-dashboard/src/api/client.ts` (lines 1-204)
+**Implemented Features**:
+- [x] Axios instance with base URL configuration
+- [x] Request interceptor for Bearer token
+- [x] Response interceptor for 401 handling
+- [x] Automatic token refresh with mutex pattern
+- [x] Token manager utility (get/set/clear/validate)
+- [x] sessionStorage for token persistence
+- [x] JWT expiration validation
+- [x] Custom event dispatch on auth failure
 
 ---
 
-### 2.2 Auth API Module
+### 2.2 Auth API Module ✅ COMPLETED
 
-**Status**: Does not exist in webapp
+**File**: `lib/auth.ts`
 
-**Required**: Create `webapp/api/auth.ts`
+**Status**: ✅ Fully implemented
 
+**Implemented API Methods**:
 ```typescript
 export const authApi = {
-  login(data: { username: string; password: string }): Promise<AuthResponse>;
-  register(data: RegisterRequest): Promise<{ message: string; email: string }>;
+  login(data: LoginRequest): Promise<AuthResponse>;
+  register(data: RegisterRequest): Promise<{ message: string; user_id: string }>;
   verifyOtp(email: string, otp: string): Promise<AuthResponse>;
   resendOtp(email: string): Promise<{ message: string }>;
   forgotPassword(email: string): Promise<{ message: string }>;
   resetPassword(token: string, newPassword: string): Promise<{ message: string }>;
   getCurrentUser(): Promise<User>;
   refreshToken(refreshToken: string): Promise<AuthResponse>;
-  logout(): Promise<{ message: string }>;
+  logout(): Promise<void>;
 };
 ```
 
 ---
 
-## 3. State Management (NEW)
+## 3. State Management ✅ COMPLETED
 
-### 3.1 Auth Store
+### 3.1 Auth Store ✅ COMPLETED
 
-**Status**: Does not exist in webapp (using local state)
+**File**: `store/authStore.ts`
 
-**Current** (App.tsx lines 304-324):
-```typescript
-const [auth, setAuth] = useState<AuthState>({ isAuthenticated: false, user: null });
-```
+**Status**: ✅ Fully implemented with Zustand
 
-**Required**: Create Zustand store `webapp/store/authStore.ts`
-
+**Implemented Interface**:
 ```typescript
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  setUser: (user: User | null) => void;
-  setIsLoading: (isLoading: boolean) => void;
+  pendingVerificationEmail: string | null;
+
   login: (user: User, accessToken: string, refreshToken: string) => void;
   logout: () => void;
+  setUser: (user: User | null) => void;
+  setPendingVerificationEmail: (email: string | null) => void;
   updateUser: (updates: Partial<User>) => void;
 }
 ```
 
-**Reference**: `web-dashboard/src/store/authStore.ts`
+**Features**:
+- Token storage in sessionStorage via tokenManager
+- Pending verification email tracking for OTP flow
+- User state persistence
 
 ---
 
@@ -716,32 +605,34 @@ export interface PaginatedResponse<T> { ... }
 
 | File | Purpose | Status |
 |------|---------|--------|
-| `api/client.ts` | Axios instance, token management, interceptors | ❌ Not created |
-| `api/auth.ts` | Auth API functions | ❌ Not created |
+| `lib/client.ts` | Axios instance, token management, interceptors | ✅ Created |
+| `lib/auth.ts` | Auth API functions | ✅ Created |
 | `api/patients.ts` | Patients API functions | ❌ Not created |
 | `api/analytics.ts` | Analytics API functions | ❌ Not created |
 | `api/user.ts` | User profile API functions | ❌ Not created |
 | `api/index.ts` | Export all API modules | ❌ Not created |
-| `store/authStore.ts` | Zustand auth state management | ❌ Not created |
-| `utils/logger.ts` | Console logging utility | ❌ Not created |
+| `store/authStore.ts` | Zustand auth state management | ✅ Created |
+| `utils/logger.ts` | Console logging utility | ✅ Created |
 
-### Recently Created Files (UI Only - Need API Integration)
+### Authentication Files (Fully Integrated)
 
 | File | Purpose | Status |
 |------|---------|--------|
-| `components/VerifyEmailScreen.tsx` | OTP/Email verification page | ✅ UI complete (mock) |
-| `components/ResetPasswordScreen.tsx` | Reset password page | ✅ UI complete (mock) |
-| `components/RegisterPatientPage.tsx` | New patient registration form | ✅ UI complete (mock) |
+| `components/LoginScreen.tsx` | Login page | ✅ API integrated |
+| `components/CreateAccountScreen.tsx` | Registration page | ✅ API integrated |
+| `components/VerifyEmailScreen.tsx` | OTP/Email verification page | ✅ API integrated |
+| `components/ForgotPasswordScreen.tsx` | Forgot password page | ✅ API integrated |
+| `components/ResetPasswordScreen.tsx` | Reset password page | ✅ API integrated |
+| `components/RegisterPatientPage.tsx` | New patient registration form | ⚠️ UI complete (needs API) |
 | `services/geminiService.ts` | Gemini AI integration for summaries | ✅ Functional |
 
-### Dependencies to Add
+### Dependencies Added
 
 ```json
 {
   "dependencies": {
-    "axios": "^1.x",
-    "zustand": "^4.x",
-    "zod": "^3.x"  // for form validation
+    "axios": "^1.x",      // ✅ Added
+    "zustand": "^4.x"     // ✅ Added
   }
 }
 ```
@@ -776,35 +667,35 @@ export interface PaginatedResponse<T> { ... }
 
 ## 12. Implementation Priority
 
-### Phase 1: Core Authentication (Critical)
-1. API Client infrastructure
-2. Auth Store (Zustand)
-3. Login page with API
-4. OTP Verification page (NEW)
-5. Logout functionality
+### Phase 1: Core Authentication ✅ COMPLETED
+1. ✅ API Client infrastructure (`lib/client.ts`)
+2. ✅ Auth Store (Zustand) (`store/authStore.ts`)
+3. ✅ Login page with API
+4. ✅ OTP Verification page
+5. ✅ Logout functionality
 
-### Phase 2: Registration & Password Reset
-6. Create Account with API
-7. Forgot Password with API
-8. Reset Password page (NEW)
+### Phase 2: Registration & Password Reset ✅ COMPLETED
+6. ✅ Create Account with API
+7. ✅ Forgot Password with API
+8. ✅ Reset Password page
 
-### Phase 3: Patient Management
-9. Patients API integration
-10. Patient list with real data
-11. Patient CRUD operations
-12. Patient Card AI summary (already works with mock)
+### Phase 3: Patient Management (NEXT PRIORITY)
+9. ❌ Patients API integration
+10. ❌ Patient list with real data
+11. ❌ Patient CRUD operations
+12. ✅ Patient Card AI summary (already works with Gemini)
 
 ### Phase 4: Analytics & Profile
-13. Analytics API integration
-14. Profile page with user data
-15. Edit profile functionality
-16. Change password functionality
+13. ❌ Analytics API integration
+14. ❌ Profile page with user data
+15. ❌ Edit profile functionality
+16. ❌ Change password functionality
 
 ### Phase 5: Settings & Polish
-17. Settings persistence
-18. Theme persistence
-19. Notification preferences
-20. Error boundaries & loading states
+17. ❌ Settings persistence
+18. ❌ Theme persistence
+19. ❌ Notification preferences
+20. ❌ Error boundaries & loading states
 
 ---
 
@@ -812,12 +703,12 @@ export interface PaginatedResponse<T> { ... }
 
 | Feature | Webapp | Web-Dashboard | Notes |
 |---------|--------|---------------|-------|
-| Login | Mock UI ✅ | Full | Need API integration |
-| Registration | Mock UI ✅ | Full | Missing fields, OTP flow |
-| OTP Verification | Mock UI ✅ | Full | VerifyEmailScreen.tsx exists |
-| Forgot Password | Mock UI ✅ | Full | Need API integration |
-| Reset Password | Mock UI ✅ | N/A (link in email) | ResetPasswordScreen.tsx exists |
-| Token Refresh | None | Full | Need interceptor |
+| Login | ✅ Full API | Full | Fully integrated |
+| Registration | ✅ Full API | Full | Fully integrated |
+| OTP Verification | ✅ Full API | Full | Fully integrated |
+| Forgot Password | ✅ Full API | Full | Fully integrated |
+| Reset Password | ✅ Full API | N/A (link in email) | Fully integrated |
+| Token Refresh | ✅ Full | Full | Mutex pattern implemented |
 | Patients | Mock data | Full API | Need API integration |
 | Patient Create | Mock UI ✅ | Full | RegisterPatientPage.tsx exists |
 | Patient Edit | None | Full | Add functionality |
@@ -825,7 +716,7 @@ export interface PaginatedResponse<T> { ... }
 | Analytics | Mock data | Full API | Need API integration |
 | Profile | Hardcoded | Full API | Need API integration |
 | Settings | Local state | Partial | Need persistence |
-| AI Summary | Gemini ✅ | N/A | Already functional |
+| AI Summary | ✅ Gemini | N/A | Already functional |
 
 ---
 
@@ -907,21 +798,26 @@ export default defineConfig({
 
 ## Conclusion
 
-The webapp has a solid UI foundation matching the web-dashboard design. Recent additions include:
+The webapp has a solid UI foundation matching the web-dashboard design.
 
-### Recently Added Components (UI Complete - Need API Integration)
-- ✅ `VerifyEmailScreen.tsx` - OTP/Email verification with 6-digit input
-- ✅ `ResetPasswordScreen.tsx` - Password reset with confirmation
-- ✅ `RegisterPatientPage.tsx` - Full patient registration form
+### Completed Components ✅
+- ✅ `LoginScreen.tsx` - Full API integration with error handling
+- ✅ `CreateAccountScreen.tsx` - Full API integration with password strength validation
+- ✅ `VerifyEmailScreen.tsx` - OTP/Email verification with resend functionality
+- ✅ `ForgotPasswordScreen.tsx` - Full API integration with security best practices
+- ✅ `ResetPasswordScreen.tsx` - Full API integration with password strength validation
+- ✅ `lib/client.ts` - Axios client with token refresh and mutex pattern
+- ✅ `lib/auth.ts` - Auth API module with all endpoints
+- ✅ `store/authStore.ts` - Zustand state management
 - ✅ `geminiService.ts` - AI-powered patient summaries (functional)
 
 ### Remaining Work
 
-1. **Infrastructure**: API client, token management, state management (Zustand)
-2. **Auth Flow**: Connect existing UI to real API endpoints
-3. **Data Integration**: Replace all mock data with real API calls
-4. **Patient Management**: Connect RegisterPatientPage to backend API
+1. **Patient Management**: Connect RegisterPatientPage to backend API, implement patient CRUD
+2. **Data Integration**: Replace mock patient/analytics data with real API calls
+3. **Profile & Settings**: Connect profile page to user API, implement settings persistence
+4. **Optional**: Google/Microsoft OAuth (UI exists, needs backend support)
 
-The existing AI features (Gemini integration) are functional and can be retained. The Google/Microsoft OAuth buttons in the UI are placeholders - OAuth integration would require additional backend work if needed.
+The authentication flow is now fully functional with production-ready error handling and security practices.
 
-**Updated Scope**: Creating ~8 new API/infrastructure files, modifying ~10 existing files for API integration, adding 2-3 new dependencies.
+**Updated Scope**: Auth phase complete. Next phase: Patient Management API integration.
