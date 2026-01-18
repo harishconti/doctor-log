@@ -6,7 +6,8 @@ import {
   ChevronDown,
   LogOut,
   Crown,
-  Zap
+  Zap,
+  Lock
 } from 'lucide-react';
 import { ViewState, User } from '../types';
 
@@ -27,21 +28,24 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
-  const NavLink = ({ view, label }: { view?: ViewState; label: string }) => {
+  const NavLink = ({ view, label, isLocked }: { view?: ViewState; label: string; isLocked?: boolean }) => {
     const isActive = view === currentView;
     return (
       <button
         onClick={() => view && onChangeView(view)}
-        className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
-          isActive 
-            ? 'text-brand-600 bg-brand-50' 
+        className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg flex items-center gap-1.5 ${
+          isActive
+            ? 'text-brand-600 bg-brand-50'
             : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
         }`}
       >
         {label}
+        {isLocked && <Lock size={12} className="text-amber-500" />}
       </button>
     );
   };
+
+  const isBasicPlan = user?.plan !== 'pro';
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans">
@@ -61,7 +65,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           <nav className="hidden md:flex items-center space-x-1">
             <NavLink view={ViewState.DASHBOARD} label="Dashboard" />
             <NavLink view={ViewState.PATIENTS} label="Patients" />
-            <NavLink view={ViewState.ANALYTICS} label="Analytics" />
+            <NavLink view={ViewState.ANALYTICS} label="Analytics" isLocked={isBasicPlan} />
             <NavLink view={ViewState.PROFILE} label="Profile" />
             <NavLink view={ViewState.SETTINGS} label="Settings" />
           </nav>
@@ -145,7 +149,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               )}
               <button onClick={() => onChangeView(ViewState.DASHBOARD)} className="block w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-600 font-medium">Dashboard</button>
               <button onClick={() => onChangeView(ViewState.PATIENTS)} className="block w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-600 font-medium">Patients</button>
-              <button onClick={() => onChangeView(ViewState.ANALYTICS)} className="block w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-600 font-medium">Analytics</button>
+              <button onClick={() => onChangeView(ViewState.ANALYTICS)} className="flex items-center gap-2 w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-600 font-medium">
+                Analytics
+                {isBasicPlan && <Lock size={14} className="text-amber-500" />}
+              </button>
               <button onClick={() => onChangeView(ViewState.PROFILE)} className="block w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-600 font-medium">Profile</button>
               <button onClick={() => onChangeView(ViewState.SETTINGS)} className="block w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-600 font-medium">Settings</button>
               {/* Mobile Upgrade button for Basic users */}

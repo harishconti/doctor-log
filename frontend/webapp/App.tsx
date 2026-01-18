@@ -496,7 +496,9 @@ const App: React.FC = () => {
             />
           )}
 
-          {currentView === ViewState.ANALYTICS && <AnalyticsPage />}
+          {currentView === ViewState.ANALYTICS && (
+            <AnalyticsPage onUpgrade={() => setCurrentView(ViewState.UPGRADE)} />
+          )}
 
           {currentView === ViewState.PROFILE && <ProfilePage />}
 
