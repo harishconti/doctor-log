@@ -32,7 +32,7 @@ docker-compose up
 
 # Services will be available at:
 # - Backend API: http://localhost:8000
-# - Web Dashboard: http://localhost:3000
+# - Web App: http://localhost:3000
 # - MongoDB: localhost:27017
 # - MailHog (email testing): http://localhost:8025
 ```
@@ -110,10 +110,10 @@ npx expo start
 
 **Note**: For physical devices, update `EXPO_PUBLIC_BACKEND_URL` to your computer's local IP address (e.g., `http://192.168.1.100:8000`)
 
-### 4. Web Dashboard Setup
+### 4. Web App Setup
 
 ```bash
-cd web-dashboard
+cd frontend/webapp
 
 # Install dependencies
 npm install
@@ -125,7 +125,7 @@ echo "VITE_API_URL=http://localhost:8000" > .env
 npm run dev
 ```
 
-The dashboard will be available at `http://localhost:5173`
+The web app will be available at `http://localhost:5173`
 
 ---
 
