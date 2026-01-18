@@ -22,11 +22,13 @@
     "zustand": "^5.0.10"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "jsdom": "^26.1.0",
+    "playwright": "^1.57.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "vitest": "^3.1.3"
