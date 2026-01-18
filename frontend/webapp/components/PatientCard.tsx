@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { Patient } from '../types';
 import { generatePatientSummary } from '../services/geminiService';
-import { Sparkles, FileText, Activity, AlertCircle, X, Clock } from 'lucide-react';
+import { Sparkles, FileText, Activity, AlertCircle, X, Clock, PenSquare } from 'lucide-react';
 import ReactMarkdown from 'react-markdown'; // Wait, standard lib only. I'll do basic rendering.
 
 interface PatientCardProps {
   patient: Patient;
   onClose: () => void;
+  onEdit?: (patient: Patient) => void;
 }
 
-const PatientCard: React.FC<PatientCardProps> = ({ patient, onClose }) => {
+const PatientCard: React.FC<PatientCardProps> = ({ patient, onClose, onEdit }) => {
   const [summary, setSummary] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -53,9 +54,20 @@ const PatientCard: React.FC<PatientCardProps> = ({ patient, onClose }) => {
              <span>ID: {patient.id}</span> • <span>{patient.age} yrs</span> • <span>{patient.gender}</span>
            </p>
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors">
-          <X size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          {onEdit && (
+            <button
+              onClick={() => onEdit(patient)}
+              className="text-gray-400 hover:text-brand-600 hover:bg-brand-50 p-2 rounded-lg transition-colors"
+              title="Edit patient"
+            >
+              <PenSquare size={20} />
+            </button>
+          )}
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors">
+            <X size={20} />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-6">
