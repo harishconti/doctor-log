@@ -77,9 +77,17 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{user?.medical_specialty || user?.role || 'Medical Professional'}</p>
               </div>
               <div className="relative">
-                <div className="w-11 h-11 rounded-full border-[3px] border-white shadow-md bg-brand-100 flex items-center justify-center text-brand-600 font-bold text-lg">
-                  {user?.full_name?.charAt(0).toUpperCase() || 'D'}
-                </div>
+                {user?.profile_photo ? (
+                  <img
+                    src={user.profile_photo}
+                    alt={user.full_name || 'User'}
+                    className="w-11 h-11 rounded-full border-[3px] border-white shadow-md object-cover"
+                  />
+                ) : (
+                  <div className="w-11 h-11 rounded-full border-[3px] border-white shadow-md bg-brand-100 flex items-center justify-center text-brand-600 font-bold text-lg">
+                    {user?.full_name?.charAt(0).toUpperCase() || 'D'}
+                  </div>
+                )}
                 <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></div>
               </div>
               <button

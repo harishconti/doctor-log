@@ -5,6 +5,7 @@ export interface User {
   phone?: string;
   full_name: string;
   medical_specialty?: string;
+  profile_photo?: string;
   plan: 'basic' | 'pro';
   role: 'doctor' | 'admin';
   subscription_status: 'trialing' | 'active' | 'canceled' | 'past_due';
