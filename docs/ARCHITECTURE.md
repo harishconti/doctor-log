@@ -11,7 +11,7 @@ HealLog is a patient management application designed for healthcare professional
 │                                                                 │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────┐ │
 │  │   Mobile    │    │    Web      │    │      Backend        │ │
-│  │    App      │◄──►│  Dashboard  │◄──►│       API           │ │
+│  │    App      │◄──►│    App      │◄──►│       API           │ │
 │  │ (React      │    │  (React +   │    │    (FastAPI +       │ │
 │  │  Native)    │    │   Vite)     │    │     MongoDB)        │ │
 │  └─────────────┘    └─────────────┘    └─────────────────────┘ │
@@ -56,17 +56,16 @@ HealLog is a patient management application designed for healthcare professional
 | Error Tracking | Sentry | 2.18.0 | Error monitoring |
 | Payments | Stripe | - | Subscription management |
 
-### Web Dashboard
+### Web App
 | Component | Technology | Version | Purpose |
 |-----------|------------|---------|---------|
-| Framework | React + Vite | 19.2.0 / 7.2.4 | Fast web development |
-| Styling | Tailwind CSS | 4.1.18 | Utility-first styling |
-| Charts | Recharts | 3.6.0 | Data visualization |
-| State | Zustand | 5.0.9 | Global state management |
-| Routing | React Router DOM | 7.11.0 | Client-side routing |
-| Form Handling | React Hook Form + Zod | 7.69.0 / 4.2.1 | Form validation |
+| Framework | React + Vite | 19.2.3 / 6.2.0 | Fast web development |
+| Styling | Tailwind CSS | 4.1.7 | Utility-first styling |
+| Charts | Recharts | 2.15.3 | Data visualization |
+| State | Zustand | 5.0.10 | Global state management |
+| AI Integration | Google Generative AI | 1.37.0 | Patient summaries |
 | HTTP Client | Axios | 1.13.2 | API communication |
-| Icons | Lucide React | 0.562.0 | Icon library |
+| Icons | Lucide React | 0.507.0 | Icon library |
 | Date Utilities | date-fns | 4.1.0 | Date formatting |
 
 ---
@@ -88,17 +87,17 @@ heal-log/
 │   ├── models/               # WatermelonDB models (5 models)
 │   ├── services/             # API services (12+ services)
 │   ├── store/                # Zustand global store
-│   ├── constants/            # App constants
-│   └── web-dashboard/        # React web dashboard
-│       ├── src/
-│       │   ├── components/   # React components
-│       │   │   ├── ui/       # UI primitives
-│       │   │   └── charts/   # Chart components
-│       │   ├── pages/        # Page components (6 page modules)
-│       │   ├── api/          # API clients
-│       │   ├── store/        # Zustand stores
-│       │   └── types/        # TypeScript types
-│       └── index.html        # Entry HTML
+│   └── constants/            # App constants
+│
+├── frontend/webapp/          # React web application
+│   ├── components/           # React components
+│   │   ├── ui/               # UI primitives
+│   │   └── charts/           # Chart components
+│   ├── lib/                  # API clients
+│   ├── services/             # Gemini AI service
+│   ├── store/                # Zustand stores
+│   ├── hooks/                # Custom React hooks
+│   └── index.html            # Entry HTML
 │
 ├── backend/                  # FastAPI backend
 │   ├── app/                  # Application modules
@@ -345,7 +344,7 @@ docker-compose up
 # Or run individually
 cd backend && uvicorn main:app --reload
 cd frontend && npx expo start
-cd frontend/web-dashboard && npm run dev
+cd frontend/webapp && npm run dev
 ```
 
 ### Testing
@@ -360,7 +359,7 @@ cd frontend && npm test
 ### Deployment
 - Backend: Docker container on cloud provider
 - Frontend: EAS Build for Play Store
-- Web Dashboard: Static hosting (Vercel/Netlify)
+- Web App: Static hosting (Vercel/Netlify)
 
 ---
 

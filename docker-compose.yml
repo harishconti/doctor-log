@@ -41,15 +41,15 @@ services:
     networks:
       - heallog_network
 
-  web-dashboard:
+  webapp:
     build:
-      context: ./frontend/web-dashboard
+      context: ./frontend/webapp
       dockerfile: Dockerfile
-    container_name: heallog_web_dashboard
+    container_name: heallog_webapp
     ports:
       - "3000:5173"
     volumes:
-      - ./frontend/web-dashboard:/app
+      - ./frontend/webapp:/app
       - /app/node_modules
     environment:
       VITE_API_URL: http://localhost:8000
