@@ -1,0 +1,29 @@
+// API modules for the webapp
+// These modules provide typed access to backend endpoints
+
+export { patientsApi } from './patients';
+export type {
+  GetPatientsParams,
+  CreatePatientRequest,
+  UpdatePatientRequest,
+  CreateNoteRequest,
+} from './patients';
+
+export { userApi } from './user';
+export type {
+  UpdateProfileRequest,
+  ChangePasswordRequest,
+  UserActivity,
+} from './user';
+
+export { analyticsApi } from './analytics';
+export type {
+  PatientGrowthData,
+  NotesActivityData,
+  WeeklyActivityData,
+  DemographicsData,
+  TreatmentData,
+} from './analytics';
+
+// Re-export auth API from lib for convenience
+export { authApi } from '../lib/auth';
