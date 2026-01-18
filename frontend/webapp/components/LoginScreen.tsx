@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, AlertCircle } from 'lucide-react';
-import { authApi } from '../api/auth';
+import { authApi } from '../lib/auth';
 import { useAuthStore } from '../store/authStore';
 import type { AxiosError } from 'axios';
 
@@ -131,10 +131,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({
               ))}
             </div>
             <div className="flex flex-col">
-               <span>Trusted by 10,000+ clinicians</span>
-               <div className="flex gap-1 text-yellow-400 text-xs">
-                 *****
-               </div>
+              <span>Trusted by 10,000+ clinicians</span>
+              <div className="flex gap-1 text-yellow-400 text-xs">
+                *****
+              </div>
             </div>
           </div>
         </div>
@@ -143,10 +143,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({
       {/* Right Side - Login Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative">
         <div className="absolute top-6 left-6 lg:hidden flex items-center gap-2">
-            <div className="w-8 h-8 bg-brand-700 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-              H
-            </div>
-            <span className="text-xl font-semibold text-brand-900">HealLog</span>
+          <div className="w-8 h-8 bg-brand-700 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+            H
+          </div>
+          <span className="text-xl font-semibold text-brand-900">HealLog</span>
         </div>
 
         <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-gray-200/50 p-8 sm:p-10 border border-gray-100">
@@ -169,7 +169,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
                 </div>
                 <input
                   type="email"

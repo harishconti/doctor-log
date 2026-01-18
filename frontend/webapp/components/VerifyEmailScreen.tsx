@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mail, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
-import { authApi } from '../api/auth';
+import { authApi } from '../lib/auth';
 import { useAuthStore } from '../store/authStore';
 import type { AxiosError } from 'axios';
 
@@ -173,7 +173,7 @@ const VerifyEmailScreen: React.FC<VerifyEmailScreenProps> = ({ onVerify, onBack,
           <div className="absolute inset-0 bg-gradient-to-tr from-brand-900 via-brand-800 to-transparent opacity-90"></div>
         </div>
         <div className="relative z-10">
-           <div className="flex items-center gap-2 mb-8">
+          <div className="flex items-center gap-2 mb-8">
             <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-brand-700 font-bold text-2xl">H</div>
             <span className="text-2xl font-semibold tracking-tight">HealLog</span>
           </div>
@@ -181,14 +181,14 @@ const VerifyEmailScreen: React.FC<VerifyEmailScreenProps> = ({ onVerify, onBack,
         <div className="relative z-10 max-w-lg mb-12">
           <h1 className="text-5xl font-bold leading-tight mb-6">Focus on patients, not paperwork.</h1>
           <p className="text-brand-100 text-lg mb-8 leading-relaxed">The intelligent dashboard for modern medical teams. Secure, fast, and designed for clarity.</p>
-           <div className="flex items-center gap-4 text-sm font-medium text-brand-50 bg-white/10 p-4 rounded-xl backdrop-blur-sm w-fit">
+          <div className="flex items-center gap-4 text-sm font-medium text-brand-50 bg-white/10 p-4 rounded-xl backdrop-blur-sm w-fit">
             <div className="flex -space-x-2">
               {[1, 2, 3].map((i) => (
                 <img key={i} src={`https://picsum.photos/seed/${i + 10}/100/100`} alt="User" className="w-8 h-8 rounded-full border-2 border-brand-900" />
               ))}
             </div>
             <div className="flex flex-col">
-               <span>Trusted by 10,000+ clinicians</span>
+              <span>Trusted by 10,000+ clinicians</span>
             </div>
           </div>
         </div>
@@ -197,8 +197,8 @@ const VerifyEmailScreen: React.FC<VerifyEmailScreenProps> = ({ onVerify, onBack,
       {/* Right Side */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative">
         <div className="absolute top-6 left-6 lg:hidden flex items-center gap-2">
-            <div className="w-8 h-8 bg-brand-700 rounded-lg flex items-center justify-center text-white font-bold text-xl">H</div>
-            <span className="text-xl font-semibold text-brand-900">HealLog</span>
+          <div className="w-8 h-8 bg-brand-700 rounded-lg flex items-center justify-center text-white font-bold text-xl">H</div>
+          <span className="text-xl font-semibold text-brand-900">HealLog</span>
         </div>
 
         <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-gray-200/50 p-8 sm:p-10 border border-gray-100">

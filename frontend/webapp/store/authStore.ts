@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { User } from '../types';
-import { tokenManager } from '../api/client';
+import { tokenManager } from '../lib/client';
 
 interface AuthState {
   user: User | null;

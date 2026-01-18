@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { User, Mail, Lock, Eye, EyeOff, AlertCircle, Check } from 'lucide-react';
-import { authApi } from '../api/auth';
+import { authApi } from '../lib/auth';
 import { useAuthStore } from '../store/authStore';
 import type { AxiosError } from 'axios';
 
@@ -128,7 +128,7 @@ const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({ onNavigateToL
             Create an account to access AI-powered insights, streamline patient management, and collaborate with your team securely.
           </p>
           <div className="flex items-center gap-4 text-sm font-medium text-brand-50 bg-white/10 p-4 rounded-xl backdrop-blur-sm w-fit">
-             <div className="flex -space-x-2">
+            <div className="flex -space-x-2">
               {[1, 2, 3].map((i) => (
                 <img key={i} src={`https://picsum.photos/seed/${i + 10}/100/100`} alt="User" className="w-8 h-8 rounded-full border-2 border-brand-900" />
               ))}
@@ -141,8 +141,8 @@ const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({ onNavigateToL
       {/* Right Side - Registration Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative">
         <div className="absolute top-6 left-6 lg:hidden flex items-center gap-2">
-            <div className="w-8 h-8 bg-brand-700 rounded-lg flex items-center justify-center text-white font-bold text-xl">H</div>
-            <span className="text-xl font-semibold text-brand-900">HealLog</span>
+          <div className="w-8 h-8 bg-brand-700 rounded-lg flex items-center justify-center text-white font-bold text-xl">H</div>
+          <span className="text-xl font-semibold text-brand-900">HealLog</span>
         </div>
 
         <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-gray-200/50 p-8 sm:p-10 border border-gray-100">
@@ -225,9 +225,8 @@ const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({ onNavigateToL
                     {[1, 2, 3, 4, 5].map((i) => (
                       <div
                         key={i}
-                        className={`h-1.5 flex-1 rounded-full transition-all ${
-                          i <= passwordStrength.score ? strengthColor : 'bg-gray-200'
-                        }`}
+                        className={`h-1.5 flex-1 rounded-full transition-all ${i <= passwordStrength.score ? strengthColor : 'bg-gray-200'
+                          }`}
                       />
                     ))}
                   </div>
@@ -236,9 +235,8 @@ const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({ onNavigateToL
                       <div key={req.id} className="flex items-center gap-1.5 text-xs">
                         <Check
                           size={12}
-                          className={`flex-shrink-0 ${
-                            req.test(password) ? 'text-green-500' : 'text-gray-300'
-                          }`}
+                          className={`flex-shrink-0 ${req.test(password) ? 'text-green-500' : 'text-gray-300'
+                            }`}
                         />
                         <span className={req.test(password) ? 'text-gray-600' : 'text-gray-400'}>
                           {req.label}
