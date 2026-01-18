@@ -6,6 +6,44 @@ This report documents the required backend integrations to migrate from `web-das
 
 **Status Update (January 2026):** All authentication pages have been fully integrated with the backend API. The webapp now has real API integration for login, registration, email verification, forgot password, and password reset flows.
 
+**Migration Status:** The webapp is nearly complete but has several remaining features that need implementation before the web-dashboard can be fully deprecated.
+
+---
+
+## Remaining Features (Before Web-Dashboard Deprecation)
+
+### Critical Missing Features
+
+| Feature | Priority | Status | Notes |
+|---------|----------|--------|-------|
+| **Patient Edit Form** | HIGH | ❌ Missing | Can only create patients, cannot edit existing |
+| **Upgrade/Payment Page** | HIGH | ❌ Missing | No Stripe checkout, no plan comparison table |
+| **Pro Plan Feature Gating** | HIGH | ❌ Missing | Analytics visible to all users without restrictions |
+| **Full Clinical Notes View** | MEDIUM | ❌ Missing | No paginated notes list in patient detail |
+
+### UI/UX Gaps
+
+| Feature | Priority | Status | Notes |
+|---------|----------|--------|-------|
+| **Loading Skeleton States** | MEDIUM | ❌ Missing | No skeleton loaders during data fetch |
+| **Favorite Toggle in Patient List** | MEDIUM | ⚠️ Partial | API ready, button not visible in list |
+| **Multiple Chart Types** | LOW | ❌ Missing | Only line charts (missing Bar, Pie) |
+
+### Partially Implemented (UI Not Wired)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Profile Photo Upload | ⚠️ API ready | Not integrated into ProfilePage UI |
+| Activity History | ⚠️ API ready | Not displayed in Profile |
+| 2FA Setup | ⚠️ API available | UI not functional |
+
+### Testing Gap
+
+| Type | Status | Notes |
+|------|--------|-------|
+| Unit Tests | ❌ 0 tests | Web-dashboard has 8 test files |
+| Component Tests | ❌ None | Need Vitest + RTL setup |
+
 ---
 
 ## Current State Analysis
@@ -700,32 +738,310 @@ export interface PaginatedResponse<T> { ... }
 20. ✅ Loading states (added to all pages)
 21. ✅ Edit Profile Modal (full API integration with photo upload)
 
----
+### Phase 6: Feature Parity (Required for Web-Dashboard Deprecation) ❌ PENDING
 
-## 13. Comparison: Webapp vs Web-Dashboard
-
-| Feature | Webapp | Web-Dashboard | Notes |
-|---------|--------|---------------|-------|
-| Login | ✅ Full API | Full | Fully integrated |
-| Registration | ✅ Full API | Full | Fully integrated |
-| OTP Verification | ✅ Full API | Full | Fully integrated |
-| Forgot Password | ✅ Full API | Full | Fully integrated |
-| Reset Password | ✅ Full API | N/A (link in email) | Fully integrated |
-| Token Refresh | ✅ Full | Full | Mutex pattern implemented |
-| Patients | ✅ Full API | Full API | Fully integrated |
-| Patient Create | ✅ Full API | Full | RegisterPatientPage.tsx integrated |
-| Patient Edit | Partial | Full | Update endpoint ready |
-| Clinical Notes | API Ready | Full | API module created |
-| Analytics | ✅ Full API | Full API | Fully integrated with date range |
-| Profile | ✅ Full API | Full API | Edit modal with photo upload |
-| Change Password | ✅ Full API | Full | Works in Profile & Settings |
-| Settings | ✅ Full API | Partial | Theme, notifications with API |
-| Theme Persistence | ✅ localStorage | N/A | Light/Dark/System support |
-| AI Summary | ✅ Gemini | N/A | Already functional |
+22. ❌ Patient Edit Form
+23. ❌ Upgrade/Payment Page with Stripe
+24. ❌ Pro Plan Feature Gating
+25. ❌ Full Clinical Notes Management
+26. ❌ Loading Skeleton States
+27. ❌ Test Suite Setup
 
 ---
 
-## 14. API Endpoints Summary
+## 13. Phase 6 Implementation Details
+
+### 13.1 Patient Edit Form ❌ NOT IMPLEMENTED
+
+**Required Files**:
+- `components/EditPatientPage.tsx` (new)
+
+**Current Gap**:
+- `RegisterPatientPage.tsx` only creates new patients
+- No way to edit existing patient information
+
+**Implementation Requirements**:
+
+| Feature | Description |
+|---------|-------------|
+| Edit Button | Add to PatientCard and patient list items |
+| Pre-populate Form | Load existing patient data into form |
+| API Integration | `PUT /api/patients/:id` |
+| Field Mapping | Same fields as RegisterPatientPage |
+| Navigation | Add `EDIT_PATIENT` to ViewState enum |
+
+**Backend Endpoint**: `PUT /api/patients/:id`
+```typescript
+// Request body same as POST /api/patients/
+{
+  name?: string,
+  phone?: string,
+  email?: string,
+  location?: string,
+  group?: string,
+  year_of_birth?: number,
+  gender?: 'male' | 'female' | 'other',
+  initial_complaint?: string
+}
+```
+
+**Tasks**:
+- [ ] Create `EditPatientPage.tsx` component
+- [ ] Add `EDIT_PATIENT` to ViewState enum
+- [ ] Add edit button to PatientCard
+- [ ] Add edit button to patient list items
+- [ ] Pre-populate form with patient data
+- [ ] Handle form submission with PUT request
+- [ ] Add success/error notifications
+
+---
+
+### 13.2 Upgrade/Payment Page ❌ NOT IMPLEMENTED
+
+**Required Files**:
+- `components/UpgradePage.tsx` (new)
+
+**Current Gap**:
+- No payment/subscription management
+- All users have access to all features
+
+**Implementation Requirements**:
+
+| Feature | Description |
+|---------|-------------|
+| Plan Comparison | Table showing Basic vs Pro features |
+| Current Plan | Display user's current plan from auth store |
+| Stripe Integration | Create checkout session |
+| Pro Badge | Crown icon for Pro users in sidebar |
+| Upgrade CTA | Button in navigation for Basic users |
+
+**Backend Endpoint**: `POST /api/payments/create-checkout-session`
+```typescript
+// Request
+{ plan: 'pro' }
+
+// Response
+{ checkout_url: string }
+```
+
+**Plan Comparison Features (from web-dashboard)**:
+| Feature | Basic | Pro |
+|---------|-------|-----|
+| Patient Management | ✅ | ✅ |
+| Clinical Notes | ✅ | ✅ |
+| AI Summaries | Limited | ✅ Unlimited |
+| Analytics Dashboard | ❌ | ✅ |
+| Data Export | ❌ | ✅ |
+| Priority Support | ❌ | ✅ |
+| Custom Reports | ❌ | ✅ |
+| Team Collaboration | ❌ | ✅ |
+| API Access | ❌ | ✅ |
+
+**Tasks**:
+- [ ] Create `UpgradePage.tsx` component
+- [ ] Add `UPGRADE` to ViewState enum
+- [ ] Build plan comparison table
+- [ ] Add Stripe checkout integration
+- [ ] Add upgrade button to sidebar (for Basic users)
+- [ ] Add Pro badge/crown icon for Pro users
+- [ ] Handle successful upgrade redirect
+
+---
+
+### 13.3 Pro Plan Feature Gating ❌ NOT IMPLEMENTED
+
+**Current Gap**:
+- Analytics page accessible to all users
+- No visual differentiation between plan tiers
+
+**Implementation Requirements**:
+
+| Feature | Description |
+|---------|-------------|
+| Plan Check | Read `user.plan` from auth store |
+| Gate Analytics | Show upgrade prompt for Basic users |
+| Visual Indicators | Lock icons on Pro-only features |
+| Upgrade Prompts | CTA buttons leading to Upgrade page |
+
+**Gating Logic**:
+```typescript
+// In AnalyticsPage.tsx
+const { user } = useAuthStore();
+
+if (user?.plan !== 'pro') {
+  return <UpgradePrompt feature="Analytics Dashboard" />;
+}
+```
+
+**Tasks**:
+- [ ] Create `UpgradePrompt.tsx` component
+- [ ] Add plan check to AnalyticsPage
+- [ ] Add lock icons to gated features in sidebar
+- [ ] Add upgrade CTA in gated areas
+
+---
+
+### 13.4 Full Clinical Notes View ❌ NOT IMPLEMENTED
+
+**Current Gap**:
+- PatientCard only shows single notes field
+- No paginated notes list
+- No note creation UI
+
+**Implementation Requirements**:
+
+| Feature | Description |
+|---------|-------------|
+| Notes List | Paginated list in patient detail |
+| Create Note | Modal/form for new notes |
+| Visit Types | Regular, Follow-up, Emergency |
+| Pagination | 20 notes per page |
+
+**Backend Endpoints**:
+```typescript
+// Get notes
+GET /api/patients/:id/notes?page=1&page_size=20
+
+// Create note
+POST /api/patients/:id/notes
+{
+  content: string,
+  visit_type: 'regular' | 'follow_up' | 'emergency'
+}
+```
+
+**Note Interface**:
+```typescript
+interface ClinicalNote {
+  id: string;
+  patient_id: string;
+  content: string;
+  visit_type: 'regular' | 'follow_up' | 'emergency';
+  created_at: string;
+  updated_at: string;
+}
+```
+
+**Tasks**:
+- [ ] Create `ClinicalNotesList.tsx` component
+- [ ] Create `CreateNoteModal.tsx` component
+- [ ] Add notes tab/section to PatientCard
+- [ ] Implement pagination for notes
+- [ ] Add visit type selector
+- [ ] Integrate with notes API endpoints
+
+---
+
+### 13.5 Loading Skeleton States ❌ NOT IMPLEMENTED
+
+**Current Gap**:
+- Pages show blank or loading spinner
+- No skeleton placeholders during data fetch
+
+**Implementation Requirements**:
+
+| Page | Skeleton Elements |
+|------|-------------------|
+| Dashboard | KPI cards, charts, activity list |
+| Patients | Patient list items, stats cards |
+| Analytics | Chart placeholders, stats |
+| Profile | User info card, activity timeline |
+
+**Tasks**:
+- [ ] Create reusable `Skeleton.tsx` component
+- [ ] Add skeleton to DashboardPage
+- [ ] Add skeleton to PatientsPage
+- [ ] Add skeleton to AnalyticsPage
+- [ ] Add skeleton to ProfilePage
+
+---
+
+### 13.6 Test Suite Setup ❌ NOT IMPLEMENTED
+
+**Current Gap**:
+- 0 test files in webapp
+- Web-dashboard has 8 test files
+
+**Implementation Requirements**:
+
+| Type | Files Needed |
+|------|--------------|
+| Config | `vitest.config.ts`, `setupTests.ts` |
+| Unit Tests | Auth store, API modules |
+| Component Tests | LoginScreen, PatientCard, etc. |
+| Integration | Auth flow, patient CRUD |
+
+**Tasks**:
+- [ ] Configure Vitest with React Testing Library
+- [ ] Create test setup file
+- [ ] Add auth store tests
+- [ ] Add LoginScreen tests
+- [ ] Add PatientsPage tests
+- [ ] Add at least 80% coverage for critical paths
+
+---
+
+## 14. Comparison: Webapp vs Web-Dashboard
+
+| Feature | Webapp | Web-Dashboard | Status |
+|---------|--------|---------------|--------|
+| **Authentication** | | | |
+| Login | ✅ Full API | ✅ Full | Parity |
+| Registration | ✅ Full API | ✅ Full | Parity |
+| OTP Verification | ✅ Full API | ✅ Full | Parity |
+| Forgot Password | ✅ Full API | ✅ Full | Parity |
+| Reset Password | ✅ Full API | ✅ Full | Parity |
+| Token Refresh | ✅ Full | ✅ Full | Parity |
+| OAuth (Google/Microsoft) | ❌ UI Only | ❌ UI Only | Both Missing |
+| **Patient Management** | | | |
+| Patient List | ✅ Full API | ✅ Full | Parity |
+| Patient Create | ✅ Full API | ✅ Full | Parity |
+| Patient Edit | ❌ Missing | ✅ Full | **Gap** |
+| Patient Delete | ✅ Full API | ✅ Full | Parity |
+| Favorite Toggle | ⚠️ API Only | ✅ Full UI | **Gap** |
+| **Clinical Notes** | | | |
+| View Notes | ⚠️ Limited | ✅ Full List | **Gap** |
+| Create Note | ⚠️ API Ready | ✅ Full | **Gap** |
+| Notes Pagination | ❌ Missing | ✅ Yes | **Gap** |
+| **Analytics** | | | |
+| Analytics Page | ✅ Full API | ✅ Full | Parity |
+| Date Range | ✅ Yes | ✅ Yes | Parity |
+| Export CSV | ✅ Yes | ✅ Yes | Parity |
+| Pro Plan Gating | ❌ Missing | ✅ Yes | **Gap** |
+| Chart Types | ⚠️ Line Only | ✅ Line/Bar/Pie | **Gap** |
+| **Profile & Settings** | | | |
+| Profile View | ✅ Full | ✅ Full | Parity |
+| Edit Profile | ✅ Modal | ✅ Full | Parity |
+| Change Password | ✅ Full | ✅ Full | Parity |
+| Photo Upload | ⚠️ API Ready | ✅ Full UI | **Gap** |
+| Activity History | ⚠️ API Ready | ✅ Displayed | **Gap** |
+| Theme Persistence | ✅ localStorage | ❌ No | Webapp Better |
+| Notifications | ✅ API | ❌ No | Webapp Better |
+| 2FA Setup | ⚠️ API Ready | ❌ No | Webapp Better |
+| **Payments** | | | |
+| Upgrade Page | ❌ Missing | ✅ Full | **Gap** |
+| Stripe Integration | ❌ Missing | ✅ Yes | **Gap** |
+| Plan Display | ❌ Missing | ✅ Crown Badge | **Gap** |
+| **AI Features** | | | |
+| AI Summary | ✅ Gemini | ❌ No | Webapp Only |
+| Clinical Analysis | ✅ Yes | ❌ No | Webapp Only |
+| **UX** | | | |
+| Loading Skeletons | ❌ Missing | ✅ Yes | **Gap** |
+| URL Deep Linking | ❌ ViewState | ✅ React Router | Different Approach |
+| **Testing** | | | |
+| Test Suite | ❌ 0 tests | ✅ 8 files | **Gap** |
+
+### Summary: Features Webapp Has That Web-Dashboard Doesn't
+- ✅ Theme persistence (Light/Dark/System with localStorage)
+- ✅ Gemini AI integration for patient summaries
+- ✅ Notification preferences API
+- ✅ 2FA setup API (endpoints available)
+- ✅ Treatment statistics in analytics
+- ✅ Combined analytics endpoint (more optimized)
+
+---
+
+## 15. API Endpoints Summary
 
 ### Authentication
 ```
@@ -776,7 +1092,7 @@ POST /api/payments/create-checkout-session
 
 ---
 
-## 15. Environment Configuration
+## 16. Environment Configuration
 
 ### Required Environment Variables
 ```env
@@ -803,7 +1119,7 @@ export default defineConfig({
 
 ## Conclusion
 
-The webapp has a solid UI foundation matching the web-dashboard design.
+The webapp has a solid UI foundation matching the web-dashboard design. Core authentication and patient management features are fully functional.
 
 ### Completed Components ✅
 - ✅ `LoginScreen.tsx` - Full API integration with error handling
@@ -826,13 +1142,93 @@ The webapp has a solid UI foundation matching the web-dashboard design.
 - ✅ `ProfilePage.tsx` - Auth store integration, edit profile modal, change password modal
 - ✅ `SettingsPage.tsx` - Theme persistence, notification API, change password
 
+### Components Needing Implementation ❌
+- ❌ `EditPatientPage.tsx` - Patient edit form (critical)
+- ❌ `UpgradePage.tsx` - Stripe payment integration (critical)
+- ❌ `UpgradePrompt.tsx` - Pro plan gating component (critical)
+- ❌ `ClinicalNotesList.tsx` - Full notes management (critical)
+- ❌ `CreateNoteModal.tsx` - Note creation UI
+- ❌ `Skeleton.tsx` - Loading skeleton components
+- ❌ Test files - Unit and integration tests
+
 ### Remaining Work
 
-1. ✅ **Edit Profile Modal**: Full modal with API integration and photo upload
-2. ✅ **Theme Persistence**: Theme store with localStorage persistence (light/dark/system)
-3. ✅ **Notification Preferences**: API integration with save functionality
-4. **Optional**: Google/Microsoft OAuth (UI exists, needs backend support)
+#### Critical (Must Complete Before Deprecating Web-Dashboard)
 
-All core features are now fully functional with production-ready error handling and security practices.
+1. **Patient Edit Form** ❌
+   - Create `EditPatientPage.tsx` component
+   - Add edit button to PatientCard and patient list
+   - Implement `PUT /api/patients/:id` integration
+   - Pre-populate form with existing patient data
+   - Handle validation and error states
 
-**Updated Scope**: All 5 phases complete. The webapp is now feature-complete for the migration from web-dashboard.
+2. **Upgrade/Payment Page** ❌
+   - Create `UpgradePage.tsx` component
+   - Add plan comparison table (Basic vs Pro features)
+   - Integrate Stripe checkout via `POST /api/payments/create-checkout-session`
+   - Display current plan status with crown badge for Pro users
+   - Add upgrade CTA in sidebar/navigation
+
+3. **Pro Plan Feature Gating** ❌
+   - Check user's `plan` field from auth store
+   - Gate analytics page behind Pro plan
+   - Show upgrade prompt for Basic users
+   - Add visual indicators for Pro-only features
+
+4. **Full Clinical Notes View** ❌
+   - Create notes list component in patient detail view
+   - Implement pagination (20 notes per page)
+   - Add create note modal/form
+   - Support visit types (regular/follow-up/emergency)
+   - Integrate with `GET /api/patients/:id/notes` and `POST /api/patients/:id/notes`
+
+#### Medium Priority
+
+5. **Loading Skeleton States** ❌
+   - Add skeleton components for Dashboard, Patients, Analytics pages
+   - Show during initial data fetch
+
+6. **Favorite Toggle in Patient List** ⚠️
+   - Add visible favorite star button to patient list items
+   - Connect to existing `POST /api/patients/:id/favorite` API
+
+7. **Profile Photo Upload UI** ⚠️
+   - Wire photo upload to ProfilePage
+   - Show current photo or placeholder
+   - Allow photo change via file picker
+
+8. **Activity History Display** ⚠️
+   - Show user activity timeline in ProfilePage
+   - Use `GET /api/users/me/activity` endpoint
+
+#### Low Priority
+
+9. **Multiple Chart Types** ❌
+   - Add Bar chart support for demographics
+   - Add Pie chart for category breakdowns
+
+10. **Test Suite** ❌
+    - Configure Vitest with React Testing Library
+    - Add unit tests for critical components
+    - Add integration tests for auth flow
+
+11. **Optional**: Google/Microsoft OAuth (UI exists, needs backend support)
+
+**Updated Status**: Phases 1-5 complete for core features. Phase 6 (Feature Parity) must be completed before web-dashboard can be deprecated.
+
+### Migration Readiness Checklist
+
+Before deprecating web-dashboard, ensure:
+
+- [ ] Patient Edit Form implemented and tested
+- [ ] Upgrade/Payment Page with Stripe integration
+- [ ] Pro Plan feature gating (especially Analytics)
+- [ ] Full Clinical Notes view with pagination
+- [ ] Loading skeleton states for better UX
+- [ ] Favorite toggle visible in patient list
+- [ ] Profile photo upload wired to UI
+- [ ] Activity history displayed in Profile
+- [ ] Minimum test coverage (recommend 80% for critical paths)
+- [ ] End-to-end testing of all user flows
+
+**Estimated Remaining Work**: 4 critical components, 6 medium priority items
