@@ -24,6 +24,7 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { userApi, ChangePasswordRequest, UpdateProfileRequest } from '../api';
 import { logger } from '../utils/logger';
+import { SkeletonProfilePage } from './Skeleton';
 
 const ActivityItem = ({ type, patient, date, status, icon: Icon, iconColor, bgColor }: {
   type: string;
@@ -465,9 +466,14 @@ const EditProfileModal = ({ isOpen, onClose, currentUser, onUpdate }: EditProfil
 };
 
 const ProfilePage = () => {
-  const { user, updateUser } = useAuthStore();
+  const { user, updateUser, isLoading } = useAuthStore();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+
+  // Show skeleton while loading
+  if (isLoading || !user) {
+    return <SkeletonProfilePage />;
+  }
 
   // User data from auth store with fallbacks
   const userName = user?.full_name || 'Doctor';

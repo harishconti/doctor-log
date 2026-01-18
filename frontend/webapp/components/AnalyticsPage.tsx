@@ -29,6 +29,7 @@ import { logger } from '../utils/logger';
 import { useAuthStore } from '../store/authStore';
 import UpgradePrompt from './UpgradePrompt';
 import { ViewState } from '../types';
+import { SkeletonStatCard, SkeletonLineChart, SkeletonProgressBar, SkeletonTableRow } from './Skeleton';
 
 // --- Sub Components ---
 
@@ -41,31 +42,33 @@ const AnalyticsStatCard = ({ icon: Icon, label, value, subValue, trend, bgClass,
   bgClass: string;
   iconColor: string;
   isLoading?: boolean;
-}) => (
-  <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-    <div className="flex justify-between items-start mb-4">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${bgClass}`}>
-        <Icon size={20} className={iconColor} />
+}) => {
+  if (isLoading) {
+    return <SkeletonStatCard />;
+  }
+
+  return (
+    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex justify-between items-start mb-4">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${bgClass}`}>
+          <Icon size={20} className={iconColor} />
+        </div>
+        {trend !== undefined && (
+          <span className={`px-2 py-1 rounded-full text-xs font-bold ${trend === 0 ? 'bg-gray-100 text-gray-600' : trend > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+            {trend > 0 ? '+' : ''}{trend === 0 ? '0%' : `${trend}%`}
+          </span>
+        )}
       </div>
-      {!isLoading && trend !== undefined && (
-        <span className={`px-2 py-1 rounded-full text-xs font-bold ${trend === 0 ? 'bg-gray-100 text-gray-600' : trend > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-          {trend > 0 ? '+' : ''}{trend === 0 ? '0%' : `${trend}%`}
-        </span>
-      )}
-    </div>
-    <div>
-      <h3 className="text-gray-500 text-sm font-medium mb-1">{label}</h3>
-      {isLoading ? (
-        <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" />
-      ) : (
+      <div>
+        <h3 className="text-gray-500 text-sm font-medium mb-1">{label}</h3>
         <div className="flex items-baseline gap-1">
           <span className="text-2xl font-bold text-gray-900">{value}</span>
           {subValue && <span className="text-sm text-gray-400 font-medium">{subValue}</span>}
         </div>
-      )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const DepartmentProgress = ({ name, value, count, colorClass, bgClass }: {
   name: string;
@@ -89,12 +92,7 @@ const DepartmentProgress = ({ name, value, count, colorClass, bgClass }: {
 );
 
 const ChartSkeleton = () => (
-  <div className="h-[300px] w-full flex items-center justify-center">
-    <div className="text-center">
-      <Loader2 className="w-8 h-8 animate-spin text-gray-300 mx-auto mb-2" />
-      <p className="text-sm text-gray-400">Loading chart data...</p>
-    </div>
-  </div>
+  <SkeletonLineChart height={300} />
 );
 
 interface ChartDataPoint {
@@ -412,11 +410,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ onUpgrade }) => {
 
           {isLoading ? (
             <div className="space-y-6">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-4 w-24 bg-gray-200 rounded mb-2" />
-                  <div className="h-2 w-full bg-gray-100 rounded" />
-                </div>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonProgressBar key={i} />
               ))}
             </div>
           ) : (
@@ -462,14 +457,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ onUpgrade }) => {
         {isLoading ? (
           <div className="p-8">
             <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-8 animate-pulse">
-                  <div className="h-4 w-48 bg-gray-200 rounded" />
-                  <div className="h-6 w-24 bg-gray-200 rounded-full" />
-                  <div className="h-4 w-16 bg-gray-200 rounded" />
-                  <div className="h-2 w-32 bg-gray-200 rounded" />
-                  <div className="h-4 w-12 bg-gray-200 rounded" />
-                </div>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonTableRow key={i} columns={5} />
               ))}
             </div>
           </div>

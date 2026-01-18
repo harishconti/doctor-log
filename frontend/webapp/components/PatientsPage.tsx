@@ -11,13 +11,13 @@ import {
   ChevronRight,
   ChevronRight as ChevronNext,
   Hourglass,
-  Loader2,
   RefreshCw
 } from 'lucide-react';
 import { Patient, PatientStats } from '../types';
 import { patientsApi, GetPatientsParams } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { logger } from '../utils/logger';
+import { SkeletonStatCard, SkeletonPatientItem } from './Skeleton';
 
 interface PatientsPageProps {
   onSelectPatient: (patient: Patient) => void;
@@ -31,21 +31,23 @@ const StatCard = ({ label, value, icon: Icon, colorClass, bgClass, isLoading }: 
   colorClass: string;
   bgClass: string;
   isLoading?: boolean;
-}) => (
-  <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 transition-transform hover:-translate-y-1 duration-200 h-28">
-    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${bgClass}`}>
-      <Icon size={26} className={colorClass} />
-    </div>
-    <div>
-      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
-      {isLoading ? (
-        <div className="w-12 h-8 bg-gray-200 rounded animate-pulse" />
-      ) : (
+}) => {
+  if (isLoading) {
+    return <SkeletonStatCard className="h-28" />;
+  }
+
+  return (
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 transition-transform hover:-translate-y-1 duration-200 h-28">
+      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${bgClass}`}>
+        <Icon size={26} className={colorClass} />
+      </div>
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
         <h3 className="text-3xl font-bold text-gray-900 tracking-tight">{value}</h3>
-      )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const PatientListItem = ({
   patient,
@@ -161,17 +163,8 @@ const PatientListItem = ({
 
 const PatientListSkeleton = () => (
   <div className="space-y-4">
-    {[...Array(5)].map((_, i) => (
-      <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm animate-pulse">
-        <div className="flex items-center gap-6">
-          <div className="w-14 h-14 rounded-full bg-gray-200" />
-          <div className="flex-1">
-            <div className="h-5 w-32 bg-gray-200 rounded mb-2" />
-            <div className="h-4 w-24 bg-gray-200 rounded" />
-          </div>
-          <div className="h-8 w-20 bg-gray-200 rounded-full" />
-        </div>
-      </div>
+    {Array.from({ length: 5 }).map((_, i) => (
+      <SkeletonPatientItem key={i} />
     ))}
   </div>
 );
