@@ -1,4 +1,4 @@
-import { apiClient } from '../lib/client';
+import { apiClient } from './client';
 import type { AnalyticsData } from '../types';
 
 export interface PatientGrowthData {

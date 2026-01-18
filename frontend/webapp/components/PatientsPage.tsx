@@ -15,7 +15,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { Patient, PatientStats } from '../types';
-import { patientsApi, GetPatientsParams } from '../api';
+import { patientsApi, GetPatientsParams } from '../lib';
 import { useAuthStore } from '../store/authStore';
 import { logger } from '../utils/logger';
 
@@ -110,50 +110,50 @@ const PatientListItem = ({
         )}
 
         <div>
-           <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-base sm:text-lg font-bold text-gray-900 group-hover:text-brand-600 transition-colors">
-                {patient.name}
-              </h3>
-              {patient.is_favorite && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleFavorite?.(patient.id, false);
-                  }}
-                  className="focus:outline-none"
-                >
-                  <Heart size={16} className="fill-red-500 text-red-500 hover:fill-red-400 hover:text-red-400 transition-colors" />
-                </button>
-              )}
-              {!patient.is_favorite && onToggleFavorite && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleFavorite?.(patient.id, true);
-                  }}
-                  className="focus:outline-none opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Heart size={16} className="text-gray-300 hover:text-red-400 transition-colors" />
-                </button>
-              )}
-           </div>
-           <div className="flex items-center gap-2 text-gray-400 text-xs sm:text-sm font-medium">
-              <Clock size={14} />
-              <span>Last Visit: {formatLastVisit(patient.lastVisit || patient.updated_at)}</span>
-           </div>
-           {patient.group && (
-             <span className="text-xs text-gray-400 mt-1 block">{patient.group}</span>
-           )}
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="text-base sm:text-lg font-bold text-gray-900 group-hover:text-brand-600 transition-colors">
+              {patient.name}
+            </h3>
+            {patient.is_favorite && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite?.(patient.id, false);
+                }}
+                className="focus:outline-none"
+              >
+                <Heart size={16} className="fill-red-500 text-red-500 hover:fill-red-400 hover:text-red-400 transition-colors" />
+              </button>
+            )}
+            {!patient.is_favorite && onToggleFavorite && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite?.(patient.id, true);
+                }}
+                className="focus:outline-none opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <Heart size={16} className="text-gray-300 hover:text-red-400 transition-colors" />
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-gray-400 text-xs sm:text-sm font-medium">
+            <Clock size={14} />
+            <span>Last Visit: {formatLastVisit(patient.lastVisit || patient.updated_at)}</span>
+          </div>
+          {patient.group && (
+            <span className="text-xs text-gray-400 mt-1 block">{patient.group}</span>
+          )}
         </div>
       </div>
 
       <div className="flex items-center justify-between w-full sm:w-auto sm:gap-6 pl-[4.5rem] sm:pl-0">
-         <span className={`px-4 py-1.5 rounded-full text-[10px] sm:text-xs font-bold border uppercase tracking-wide ${statusConfig.className}`}>
-            {statusConfig.label}
-         </span>
-         <div className="text-gray-300 group-hover:text-brand-400 transition-colors">
-            <ChevronNext size={20} />
-         </div>
+        <span className={`px-4 py-1.5 rounded-full text-[10px] sm:text-xs font-bold border uppercase tracking-wide ${statusConfig.className}`}>
+          {statusConfig.label}
+        </span>
+        <div className="text-gray-300 group-hover:text-brand-400 transition-colors">
+          <ChevronNext size={20} />
+        </div>
       </div>
     </div>
   );
@@ -336,32 +336,32 @@ const PatientsPage: React.FC<PatientsPageProps> = ({ onSelectPatient, onAddNewPa
       {/* Header Section */}
       <div className="flex flex-col gap-6">
         <div>
-           <p className="text-gray-500 font-medium mb-1 text-sm">{today}</p>
-           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{greeting}, {userName}</h1>
+          <p className="text-gray-500 font-medium mb-1 text-sm">{today}</p>
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{greeting}, {userName}</h1>
         </div>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-           <div className="w-full"></div>
+          <div className="w-full"></div>
 
-           <div className="flex w-full md:w-auto items-center gap-3">
-              <div className="relative flex-1 md:w-96">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={handleSearch}
-                  placeholder="Search patients by name or ID..."
-                  className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 shadow-sm"
-                />
-              </div>
-              <button
-                onClick={onAddNewPatient}
-                className="flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg shadow-brand-600/20 transition-all active:scale-95 whitespace-nowrap"
-              >
-                <Plus size={20} />
-                New Patient
-              </button>
-           </div>
+          <div className="flex w-full md:w-auto items-center gap-3">
+            <div className="relative flex-1 md:w-96">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearch}
+                placeholder="Search patients by name or ID..."
+                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 shadow-sm"
+              />
+            </div>
+            <button
+              onClick={onAddNewPatient}
+              className="flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg shadow-brand-600/20 transition-all active:scale-95 whitespace-nowrap"
+            >
+              <Plus size={20} />
+              New Patient
+            </button>
+          </div>
         </div>
       </div>
 
@@ -413,11 +413,10 @@ const PatientsPage: React.FC<PatientsPageProps> = ({ onSelectPatient, onAddNewPa
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key as FilterTab)}
-              className={`pb-4 px-2 sm:px-4 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${
-                activeTab === tab.key
+              className={`pb-4 px-2 sm:px-4 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.key
                   ? 'border-brand-600 text-brand-600'
                   : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-200'
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -519,11 +518,10 @@ const PatientsPage: React.FC<PatientsPageProps> = ({ onSelectPatient, onAddNewPa
                   <button
                     key={idx}
                     onClick={() => setCurrentPage(page)}
-                    className={`w-10 h-10 rounded-xl text-sm font-bold transition-colors ${
-                      currentPage === page
+                    className={`w-10 h-10 rounded-xl text-sm font-bold transition-colors ${currentPage === page
                         ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/30'
                         : 'border border-transparent text-gray-500 hover:bg-gray-100'
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>

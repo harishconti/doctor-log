@@ -15,7 +15,7 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-import { patientsApi, CreatePatientRequest } from '../api';
+import { patientsApi, CreatePatientRequest } from '../lib';
 import { logger } from '../utils/logger';
 import { Patient } from '../types';
 
@@ -177,13 +177,11 @@ const RegisterPatientPage: React.FC<RegisterPatientPageProps> = ({ onBack, onSub
   };
 
   const inputClassName = (fieldName: keyof FormErrors) =>
-    `block w-full pl-11 pr-4 py-3 bg-white border rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium ${
-      errors[fieldName] ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200'
+    `block w-full pl-11 pr-4 py-3 bg-white border rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium ${errors[fieldName] ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200'
     }`;
 
   const selectClassName = (fieldName: keyof FormErrors) =>
-    `block w-full pl-11 pr-10 py-3 bg-white border rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium appearance-none ${
-      errors[fieldName] ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200'
+    `block w-full pl-11 pr-10 py-3 bg-white border rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium appearance-none ${errors[fieldName] ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200'
     }`;
 
   if (submitSuccess) {
@@ -410,83 +408,83 @@ const RegisterPatientPage: React.FC<RegisterPatientPageProps> = ({ onBack, onSub
             {/* Emergency Contact Section */}
             <div className="pt-4">
               <div className="flex items-center gap-2 mb-6">
-                 <Asterisk size={20} className="text-gray-900" />
-                 <h3 className="text-lg font-bold text-gray-900">Emergency Contact</h3>
+                <Asterisk size={20} className="text-gray-900" />
+                <h3 className="text-lg font-bold text-gray-900">Emergency Contact</h3>
               </div>
 
               <div className="space-y-6">
                 <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">Contact Name *</label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                        <User size={18} />
-                        </div>
-                        <input
-                        type="text"
-                        name="emergencyName"
-                        value={formData.emergencyName}
-                        onChange={handleChange}
-                        placeholder="Full Name"
-                        disabled={isLoading}
-                        className={inputClassName('emergencyName')}
-                        />
+                  <label className="block text-sm font-bold text-gray-900 mb-2">Contact Name *</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                      <User size={18} />
                     </div>
-                    {errors.emergencyName && <p className="mt-1 text-sm text-red-600">{errors.emergencyName}</p>}
+                    <input
+                      type="text"
+                      name="emergencyName"
+                      value={formData.emergencyName}
+                      onChange={handleChange}
+                      placeholder="Full Name"
+                      disabled={isLoading}
+                      className={inputClassName('emergencyName')}
+                    />
+                  </div>
+                  {errors.emergencyName && <p className="mt-1 text-sm text-red-600">{errors.emergencyName}</p>}
                 </div>
 
                 <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">Contact Phone *</label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                        <Phone size={18} />
-                        </div>
-                        <input
-                        type="tel"
-                        name="emergencyPhone"
-                        value={formData.emergencyPhone}
-                        onChange={handleChange}
-                        placeholder="(555) 000-0000"
-                        disabled={isLoading}
-                        className={inputClassName('emergencyPhone')}
-                        />
+                  <label className="block text-sm font-bold text-gray-900 mb-2">Contact Phone *</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                      <Phone size={18} />
                     </div>
-                    {errors.emergencyPhone && <p className="mt-1 text-sm text-red-600">{errors.emergencyPhone}</p>}
+                    <input
+                      type="tel"
+                      name="emergencyPhone"
+                      value={formData.emergencyPhone}
+                      onChange={handleChange}
+                      placeholder="(555) 000-0000"
+                      disabled={isLoading}
+                      className={inputClassName('emergencyPhone')}
+                    />
+                  </div>
+                  {errors.emergencyPhone && <p className="mt-1 text-sm text-red-600">{errors.emergencyPhone}</p>}
                 </div>
               </div>
             </div>
 
             {/* Reason for Visit */}
             <div className="pt-2">
-               <div className="flex justify-between mb-2">
-                 <label className="block text-sm font-bold text-gray-900">Reason for Visit</label>
-                 <span className="text-xs text-gray-400 italic">Optional</span>
-               </div>
-               <textarea
-                 name="reason"
-                 value={formData.reason}
-                 onChange={handleChange}
-                 rows={4}
-                 placeholder="Briefly describe symptoms or purpose of visit..."
-                 disabled={isLoading}
-                 className="block w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium resize-none disabled:opacity-50 disabled:cursor-not-allowed"
-               />
+              <div className="flex justify-between mb-2">
+                <label className="block text-sm font-bold text-gray-900">Reason for Visit</label>
+                <span className="text-xs text-gray-400 italic">Optional</span>
+              </div>
+              <textarea
+                name="reason"
+                value={formData.reason}
+                onChange={handleChange}
+                rows={4}
+                placeholder="Briefly describe symptoms or purpose of visit..."
+                disabled={isLoading}
+                className="block w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+              />
             </div>
 
             <div className="pt-4 pb-2">
-                <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-brand-500/20 text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {isLoading ? (
-                      <>
-                        <Loader2 size={20} className="animate-spin" />
-                        Registering...
-                      </>
-                    ) : (
-                      'Register Patient'
-                    )}
-                </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-brand-500/20 text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    Registering...
+                  </>
+                ) : (
+                  'Register Patient'
+                )}
+              </button>
             </div>
 
           </form>

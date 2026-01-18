@@ -1,4 +1,4 @@
-import { apiClient } from '../lib/client';
+import { apiClient } from './client';
 import type { Patient, PaginatedResponse, PatientStats, ClinicalNote } from '../types';
 
 export interface GetPatientsParams {
@@ -25,7 +25,7 @@ export interface CreatePatientRequest {
   emergency_contact_phone?: string;
 }
 
-export interface UpdatePatientRequest extends Partial<CreatePatientRequest> {}
+export interface UpdatePatientRequest extends Partial<CreatePatientRequest> { }
 
 export interface CreateNoteRequest {
   content: string;

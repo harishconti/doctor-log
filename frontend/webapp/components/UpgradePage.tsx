@@ -18,7 +18,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import { paymentsApi } from '../api/payments';
+import { paymentsApi } from '../lib/payments';
 import { logger } from '../utils/logger';
 
 interface UpgradePageProps {

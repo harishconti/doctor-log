@@ -1,4 +1,4 @@
-import { apiClient } from '../lib/client';
+import { apiClient } from './client';
 
 export interface CreateCheckoutSessionRequest {
   plan: 'pro';

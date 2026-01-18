@@ -14,6 +14,7 @@ import AnalyticsPage from './components/AnalyticsPage';
 import ProfilePage from './components/ProfilePage';
 import SettingsPage from './components/SettingsPage';
 import UpgradePage from './components/UpgradePage';
+import ErrorBoundary from './components/ErrorBoundary';
 import { ViewState, Patient } from './types';
 import { MOCK_PATIENTS } from './constants';
 import { useAuthStore } from './store/authStore';
@@ -460,10 +461,12 @@ const App: React.FC = () => {
           {currentView === ViewState.DASHBOARD && <DashboardOverview userName={displayName} />}
 
           {currentView === ViewState.PATIENTS && (
-            <PatientsPage
-              onSelectPatient={setSelectedPatient}
-              onAddNewPatient={() => setCurrentView(ViewState.REGISTER_PATIENT)}
-            />
+            <ErrorBoundary>
+              <PatientsPage
+                onSelectPatient={setSelectedPatient}
+                onAddNewPatient={() => setCurrentView(ViewState.REGISTER_PATIENT)}
+              />
+            </ErrorBoundary>
           )}
 
           {currentView === ViewState.REGISTER_PATIENT && (
