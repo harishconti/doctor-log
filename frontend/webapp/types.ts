@@ -33,6 +33,8 @@ export interface Patient {
   year_of_birth?: number;
   gender?: 'male' | 'female' | 'other';
   active_treatment_plan?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
   created_at: string;
   updated_at: string;
   // Legacy fields for compatibility with mock data
