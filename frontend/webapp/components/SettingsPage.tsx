@@ -1,26 +1,29 @@
 import React, { useState } from 'react';
-import { 
-  User, 
-  Shield, 
-  Bell, 
-  Sliders, 
-  HelpCircle, 
-  FileText, 
-  Bug, 
+import {
+  User,
+  Shield,
+  Bell,
+  Sliders,
+  HelpCircle,
+  FileText,
+  Bug,
   MessageSquare,
   RefreshCw,
   Moon,
   Sun,
   ChevronDown,
   Mail,
-  Check,
   X,
   CreditCard,
   QrCode,
   ArrowRight,
   CheckCircle2,
-  Circle
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
+import { userApi } from '../api';
+import { logger } from '../utils/logger';
 
 // --- Sub Components ---
 
@@ -48,8 +51,9 @@ const SectionHeader = ({ icon: Icon, title, description, bgClass, iconColor }: a
 // --- Settings Page Component ---
 
 const SettingsPage = () => {
+  const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('Billing');
-  
+
   // General Settings State
   const [notifications, setNotifications] = useState({
     email: true,
@@ -59,10 +63,55 @@ const SettingsPage = () => {
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
   const [theme, setTheme] = useState('light');
 
+  // Password Change State
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
   // Billing State
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [selectedPlan, setSelectedPlan] = useState('Pro');
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi'>('card');
+
+  // Handle password change
+  const handlePasswordChange = async () => {
+    setPasswordError(null);
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 12) {
+      setPasswordError('Password must be at least 12 characters');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await userApi.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      setPasswordSuccess(true);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => setPasswordSuccess(false), 3000);
+    } catch (err: any) {
+      logger.error('Failed to change password', err);
+      if (err.response?.status === 400) {
+        setPasswordError('Current password is incorrect');
+      } else {
+        setPasswordError('Failed to change password. Please try again.');
+      }
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   const renderGeneralSettings = () => (
     <div className="space-y-8">
@@ -80,9 +129,9 @@ const SettingsPage = () => {
               <div>
                   <label className="block text-sm font-bold text-gray-900 mb-2">Email Address</label>
                   <div className="relative">
-                      <input 
-                          type="email" 
-                          value="alexander.smith@heallog.med" 
+                      <input
+                          type="email"
+                          value={user?.email || 'Not available'}
                           readOnly
                           className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-600"
                       />
@@ -132,13 +181,50 @@ const SettingsPage = () => {
           <div className="space-y-6">
               <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
                   <h4 className="text-sm font-bold text-gray-900 mb-4">Change Password</h4>
+                  {passwordError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+                      <AlertCircle className="text-red-500" size={16} />
+                      <span className="text-red-700 text-sm font-medium">{passwordError}</span>
+                    </div>
+                  )}
+                  {passwordSuccess && (
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2">
+                      <CheckCircle2 className="text-green-500" size={16} />
+                      <span className="text-green-700 text-sm font-medium">Password changed successfully!</span>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <input type="password" placeholder="Current Password" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
-                      <input type="password" placeholder="New Password" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
-                      <input type="password" placeholder="Confirm Password" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
+                      <input
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="Current Password"
+                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                      />
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="New Password (min 12 chars)"
+                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                      />
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm Password"
+                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                      />
                   </div>
                   <div className="flex justify-end">
-                      <button className="text-sm font-bold text-brand-600 hover:text-brand-700">Update Password</button>
+                      <button
+                        onClick={handlePasswordChange}
+                        disabled={isChangingPassword || !currentPassword || !newPassword || !confirmPassword}
+                        className="text-sm font-bold text-brand-600 hover:text-brand-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {isChangingPassword && <Loader2 size={14} className="animate-spin" />}
+                        {isChangingPassword ? 'Updating...' : 'Update Password'}
+                      </button>
                   </div>
               </div>
 
