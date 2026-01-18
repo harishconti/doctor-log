@@ -25,5 +25,13 @@ export type {
   TreatmentData,
 } from './analytics';
 
+export { paymentsApi } from './payments';
+export type {
+  CreateCheckoutSessionRequest,
+  CheckoutSessionResponse,
+  SubscriptionStatus,
+  BillingPortalResponse,
+} from './payments';
+
 // Re-export auth API from lib for convenience
 export { authApi } from '../lib/auth';

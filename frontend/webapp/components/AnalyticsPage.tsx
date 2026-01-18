@@ -26,6 +26,9 @@ import {
 } from 'recharts';
 import { analyticsApi, PatientGrowthData, TreatmentData, DemographicsData } from '../api';
 import { logger } from '../utils/logger';
+import { useAuthStore } from '../store/authStore';
+import UpgradePrompt from './UpgradePrompt';
+import { ViewState } from '../types';
 
 // --- Sub Components ---
 
@@ -108,7 +111,13 @@ interface TreatmentDisplayData {
   trend: number;
 }
 
-const AnalyticsPage = () => {
+interface AnalyticsPageProps {
+  onUpgrade?: () => void;
+}
+
+const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ onUpgrade }) => {
+  const user = useAuthStore((state) => state.user);
+
   // State for data
   const [growthData, setGrowthData] = useState<ChartDataPoint[]>([]);
   const [treatmentsData, setTreatmentsData] = useState<TreatmentDisplayData[]>([]);
@@ -122,6 +131,16 @@ const AnalyticsPage = () => {
   // State for filters
   const [dateRange, setDateRange] = useState(30);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Gate feature for Pro users only
+  if (user?.plan !== 'pro') {
+    return (
+      <UpgradePrompt
+        feature="Analytics Dashboard"
+        onUpgrade={onUpgrade || (() => {})}
+      />
+    );
+  }
 
   // Computed stats
   const totalNewPatients = growthData.reduce((sum, d) => sum + d.newPatients, 0);

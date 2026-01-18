@@ -9,9 +9,11 @@ import DashboardLayout from './components/DashboardLayout';
 import PatientCard from './components/PatientCard';
 import PatientsPage from './components/PatientsPage';
 import RegisterPatientPage from './components/RegisterPatientPage';
+import EditPatientPage from './components/EditPatientPage';
 import AnalyticsPage from './components/AnalyticsPage';
 import ProfilePage from './components/ProfilePage';
 import SettingsPage from './components/SettingsPage';
+import UpgradePage from './components/UpgradePage';
 import { ViewState, Patient } from './types';
 import { MOCK_PATIENTS } from './constants';
 import { useAuthStore } from './store/authStore';
@@ -311,6 +313,7 @@ const App: React.FC = () => {
 
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.DASHBOARD);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
 
   // Auth state management
   const [authView, setAuthView] = useState<AuthView>('LOGIN');
@@ -428,6 +431,7 @@ const App: React.FC = () => {
       onChangeView={(view) => {
         setCurrentView(view);
         setSelectedPatient(null);
+        setEditingPatientId(null);
       }}
       onLogout={handleLogout}
       user={user}
@@ -444,6 +448,11 @@ const App: React.FC = () => {
           <PatientCard
             patient={selectedPatient}
             onClose={() => setSelectedPatient(null)}
+            onEdit={(patient) => {
+              setEditingPatientId(patient.id);
+              setSelectedPatient(null);
+              setCurrentView(ViewState.EDIT_PATIENT);
+            }}
           />
         </div>
       ) : (
@@ -467,11 +476,42 @@ const App: React.FC = () => {
             />
           )}
 
-          {currentView === ViewState.ANALYTICS && <AnalyticsPage />}
+          {currentView === ViewState.EDIT_PATIENT && editingPatientId && (
+            <EditPatientPage
+              patientId={editingPatientId}
+              onBack={() => {
+                setEditingPatientId(null);
+                if (selectedPatient) {
+                  setCurrentView(ViewState.PATIENTS);
+                } else {
+                  setCurrentView(ViewState.PATIENTS);
+                }
+              }}
+              onSubmit={(updatedPatient) => {
+                console.log('Updated patient:', updatedPatient);
+                setSelectedPatient(updatedPatient);
+                setEditingPatientId(null);
+                setCurrentView(ViewState.PATIENTS);
+              }}
+            />
+          )}
+
+          {currentView === ViewState.ANALYTICS && (
+            <AnalyticsPage onUpgrade={() => setCurrentView(ViewState.UPGRADE)} />
+          )}
 
           {currentView === ViewState.PROFILE && <ProfilePage />}
 
           {currentView === ViewState.SETTINGS && <SettingsPage />}
+
+          {currentView === ViewState.UPGRADE && (
+            <UpgradePage
+              onUpgradeSuccess={() => {
+                // After successful upgrade, could show a toast or refresh user data
+                console.log('Upgrade successful!');
+              }}
+            />
+          )}
 
           {currentView === ViewState.AI_SCRIBE && (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center">
