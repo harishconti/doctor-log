@@ -21,6 +21,7 @@ This documentation covers the new HealLog architecture, transitioning from a sin
 
 | Document | Description |
 |----------|-------------|
+| [GETTING_STARTED.md](./GETTING_STARTED.md) | **Start here!** Quick setup guide for all roles |
 | [ARCHITECTURE_OVERVIEW.md](./ARCHITECTURE_OVERVIEW.md) | System architecture, tech stack, and component diagram |
 | [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) | PostgreSQL schema with Row-Level Security |
 | [API_REFERENCE.md](./API_REFERENCE.md) | Complete REST API endpoint documentation |
